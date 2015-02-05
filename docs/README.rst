@@ -2,7 +2,7 @@ bumper-lib
 ===========
 
 A library to bump / pin your dependency requirements.
-This is used by the bumper_ and workspace-tools_ module.
+This is used by the bumper_ and workspace-tools_ package.
 
 .. _bumper: https://pypi.python.org/pypi/bumper
 .. _workspace-tools: https://pypi.python.org/pypi/workspace-tools
@@ -11,6 +11,9 @@ This is used by the bumper_ and workspace-tools_ module.
 More
 ====
 
+| bumper: https://pypi.python.org/pypi/bumper
+| workspace-tools: https://pypi.python.org/pypi/workspace-tools
+|
 | Documentation: http://bumper-lib.readthedocs.org/
 |
 | PyPI: https://pypi.python.org/pypi/bumper-lib

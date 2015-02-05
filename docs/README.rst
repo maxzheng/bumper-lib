@@ -5,7 +5,7 @@ A library to bump / pin your dependency requirements.
 This is used by the bumper_ and workspace-tools_ module.
 
 .. _bumper: https://pypi.python.org/pypi/bumper
-.. _workspace-tools: https://pypi.python.org/pypi/bumper
+.. _workspace-tools: https://pypi.python.org/pypi/workspace-tools
 
 
 More

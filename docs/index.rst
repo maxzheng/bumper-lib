@@ -21,6 +21,14 @@ API Documentation
    cars
    utils
 
+Change Log
+=================
+
+.. toctree::
+   :maxdepth: 1
+
+   CHANGELOG
+
 Indices and tables
 ==================
 

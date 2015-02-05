@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 def bump():
-  """ Bump requirements in requirements.txt or pinned.txt """
+  """ CLI entry point to bump requirements in requirements.txt or pinned.txt """
 
   parser = argparse.ArgumentParser(description=bump.__doc__)
   parser.add_argument('names', nargs='*', help="""
@@ -44,6 +44,8 @@ def bump():
 
 
 class BumperDriver(object):
+  """ Driver that controls the main logic / coordinates the bumps with different bumper models (cars) """
+
   def __init__(self, targets, bumper_models=None, full_throttle=False, test_drive=False):
     """
     :param list targets: List of file paths to bump

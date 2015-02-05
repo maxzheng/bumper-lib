@@ -14,15 +14,25 @@ class BumpAccident(Exception):
 
 
 class BumpRequirement(object):
-  """ A single requirement to be bumped """
+  """ A single requirement to be bumped or filtered. It is a wrapper on top of :class:`pkg_resources.Requirement`. """
 
   def __init__(self, req, required=False):
+    """
+      :param pkg_resources.Requirement req:
+      :param bool required: Is this requirement required to be fulfilled? If not, then it is a filter.
+    """
     self.requirement = req
     self.required = required
     self.required_by = None
 
   @classmethod
   def parse(cls, s, required=False):
+    """
+      Parse string to create an instance
+
+      :param str s: String with requirement to parse
+      :param bool required: Is this requirement required to be fulfilled? If not, then it is a filter.
+    """
     req = pkg_resources.Requirement.parse(s)
     return cls(req, required=required)
 
@@ -40,6 +50,12 @@ class Bump(object):
   """ A change made in a target file. """
 
   def __init__(self, name, new_version, changes=None, requirements=None):
+    """
+      :param str name: Name of the product/library that was bumped
+      :param str new_version: New version that was bumped to
+      :param any changes: Detailed changelog entries from the old version to the new version
+      :param str|list requirements: Any requirements that must be fulfilled for this bump to occur.
+    """
     self.name = name
     self.new_version = new_version
     self.changes = changes
@@ -49,9 +65,11 @@ class Bump(object):
 
   @classmethod
   def from_requirement(cls, req):
+    """ Create an instance from :class:`pkg_resources.Requirement` instance """
     return cls(req.project_name, req.specs and ''.join(req.specs[0]) or '')
 
   def requires(self, req):
+    """ Add new requirements that must be fulfilled for this bump to occur """
     reqs = req if isinstance(req, list) else [req]
     for req in reqs:
       req.required = True
@@ -59,6 +77,7 @@ class Bump(object):
       self.requirements.append(req)
 
   def satisfies(self, req):
+    """ Does this bump satisfies the given requirements? """
     if req.project_name != self.name:
       return False
 
@@ -85,8 +104,6 @@ class AbstractBumper(object):
 
   def __init__(self, target, test_drive=False):
     """
-      Initialize with the target to bump.
-
       :param str target: Path to a target file to bump.
       :param bool test_drive: Perform a dry run
     """
@@ -103,12 +120,20 @@ class AbstractBumper(object):
     raise NotImplementedError
 
   def _bump(self, bump_requirements, **kwargs):
+    """
+      Subclass must override this `_bump` method and not the `bump` method.
+      This does the actual bumping/updating of files based on the requirements.
+
+      :param list bump_requirements: Dict of product name to :class:`BumpRequirement` instances to be bumped.
+                                     If any of the requirement project names is found in `self.target`, then
+                                     `self.found_bump_requirements` will be set to True.
+      :param dict kwargs: Additional args from argparse. Some bumpers accept user options, and some not.
+      :return: List of :class:`Bump` changes made.
+    """
     raise NotImplementedError
 
   def bump_message(self, include_changes=False):
-    """
-      Compose a bump message for the given bumps
-    """
+    """ Compose a bump message for the given bumps """
     raise NotImplementedError
 
   def bump(self, bump_requirements=None, **kwargs):
@@ -139,6 +164,7 @@ class AbstractBumper(object):
 
 
 class RequirementsBumper(AbstractBumper):
+  """ Bumper for requirements.txt or pinned.txt """
 
   @classmethod
   def likes(cls, target):

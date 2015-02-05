@@ -7,9 +7,10 @@ import sys
 log = logging.getLogger(__name__)
 
 
-def parse_requirements(names, in_file=None):
+def parse_requirements(requirements, in_file=None):
+  """ Parse string requirements into list of :class:`pkg_resources.Requirement` instances """
   try:
-    return list(pkg_resources.parse_requirements(names))
+    return list(pkg_resources.parse_requirements(requirements))
   except Exception as e:
     in_file = ' in %s' % in_file if in_file else ''
     log.error(' '.join(e) + in_file)
@@ -17,9 +18,11 @@ def parse_requirements(names, in_file=None):
 
 
 class PyPI(object):
+  """ Helper functions to get package info from PyPI """
 
   @staticmethod
   def module_info(module):
+    """ All module info for given module """
     module_json_url = 'https://pypi.python.org/pypi/%s/json' % module
 
     try:
@@ -33,8 +36,10 @@ class PyPI(object):
 
   @staticmethod
   def latest_module_version(module):
+    """ Latest version for module """
     return PyPI.module_info(module)['info']['version']
 
   @staticmethod
   def all_module_versions(module):
+    """ All versions for module """
     return sorted(PyPI.module_info(module)['releases'].keys(), key=lambda x: x.split(), reverse=True)

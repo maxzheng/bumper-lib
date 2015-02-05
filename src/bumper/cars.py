@@ -1,11 +1,16 @@
 import logging
 import os
 import pkg_resources
-import sys
 
-from bumper.utils import parse_requirements, PYPI
+
+from bumper.utils import parse_requirements, PyPI
 
 log = logging.getLogger(__name__)
+
+
+class BumpAccident(Exception):
+  """ Exception for any bump errors """
+  pass
 
 
 class BumpRequirement(object):
@@ -166,7 +171,7 @@ class RequirementsBumper(AbstractBumper):
         self.found_bump_requirements = True
 
         if req.specs:
-          latest_version = PYPI.latest_module_version(req.project_name)
+          latest_version = PyPI.latest_module_version(req.project_name)
           if latest_version not in req:
             op = req.specs[0][0]
             if op == '<':
@@ -198,7 +203,7 @@ class RequirementsBumper(AbstractBumper):
     for name, req in bump_requirements.items():
       if req.required and name not in requirements:
         try:
-          latest_version = PYPI.latest_module_version(name)
+          latest_version = PyPI.latest_module_version(name)
         except Exception:
           log.debug('Will not add new requirement for %s to %s as it is not published on PyPI', name, self.target)
           continue
@@ -230,8 +235,9 @@ class RequirementsBumper(AbstractBumper):
     return msg
 
   def _check_requirement(self, req):
-    all_module_versions = PYPI.all_module_versions(req.project_name)
+    all_module_versions = PyPI.all_module_versions(req.project_name)
     if req.specs and not any(version in req for version in all_module_versions):
-      log.error('There are no published versions that satisfies %s', req)
-      log.info('Please change to match at least one of these: %s', ', '.join(all_module_versions[:10]))
-      sys.exit(1)
+      msg = ('There are no published versions that satisfies %s\n        '
+             'Please change to match at least one of these: %s' % (req, ', '.join(all_module_versions[:10])))
+      raise BumpAccident(msg)
+

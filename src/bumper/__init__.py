@@ -1,17 +1,46 @@
+import argparse
 import itertools
 import logging
 import os
 import sys
 
-from bumper.cars import RequirementsBumper, BumpRequirement
+from bumper.cars import RequirementsBumper, BumpRequirement, BumpAccident
 from bumper.utils import parse_requirements
 
 log = logging.getLogger(__name__)
 
 
-class BumpAccident(Exception):
-  """ Exception for any bump errors """
-  pass
+def bump():
+  """ Bump requirements in requirements.txt or pinned.txt """
+
+  parser = argparse.ArgumentParser(description=bump.__doc__)
+  parser.add_argument('names', nargs='*', help="""
+    Only bump dependencies that match the name.
+    Name can be a product group name defined in workspace.cfg.
+    To bump to a specific version instead of latest, append version to name
+    (i.e. requests==1.2.3 or 'requests>=1.2.3'). When > or < is used, be sure to quote.""")
+  parser.add_argument('--add', '--require', action='store_true',
+                      help='Add the `names` to the requirements file if they don\'t exist.')
+  parser.add_argument('--file', help='Requirement file to bump. Defaults to requirements.txt and pinned.txt')
+  parser.add_argument('--force', action='store_true', help='Force a bump even when certain bump requirements are not met.')
+  parser.add_argument('-n', '--dry-run', action='store_true', help='Perform a dry run without making changes')
+  parser.add_argument('--debug', action='store_true', help='Turn on debug mode')
+
+  args = parser.parse_args()
+  targets = [args.file] if args.file else ['requirements.txt', 'pinned.txt']
+
+  level = logging.DEBUG if args.debug else logging.INFO
+  logging.basicConfig(level=level, format='[%(levelname)s] %(message)s')
+
+  try:
+    bumper = BumperDriver(targets, full_throttle=args.force, test_drive=args.dry_run)
+    bumper.bump(args.names, required=args.add)
+  except Exception as e:
+    if args.debug:
+      raise
+    else:
+      log.error(e)
+      sys.exit(1)
 
 
 class BumperDriver(object):
@@ -44,7 +73,6 @@ class BumperDriver(object):
 
     bump_requirements = {}
     if filter_requirements:
-      log.info('Only bumping: %s', ' '.join(filter_requirements))
       requirements = parse_requirements(filter_requirements)
       bump_requirements = dict([(r.project_name, BumpRequirement(r, required=required)) for r in requirements])
 
@@ -52,96 +80,101 @@ class BumperDriver(object):
     bumpers = []
     bumps = []
 
-    for target in found_targets:
-      log.debug('Bump target: %s', target)
+    try:
 
-      target_bumpers = []
-      target_bump_requirements = bump_requirements
+      for target in found_targets:
+        log.debug('Bump target: %s', target)
 
-      while True:
-        if not target_bumpers:
-          target_bumpers = [model(target, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
+        target_bumpers = []
+        target_bump_requirements = bump_requirements
 
+        while True:
           if not target_bumpers:
-            log.warn('No bumpers found that can bump %s', target)
-            continue
+            target_bumpers = [model(target, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
 
-          bumpers.extend(target_bumpers)
+            if not target_bumpers:
+              log.warn('No bumpers found that can bump %s', target)
+              continue
 
-        new_target_bump_requirements = {}
+            bumpers.extend(target_bumpers)
 
-        for bumper in target_bumpers:
-          target_bumps = bumper.bump(target_bump_requirements)
-          bumps.extend(target_bumps)
+          new_target_bump_requirements = {}
 
-          filter_matched |= bumper.found_bump_requirements or len(target_bumps)
+          for bumper in target_bumpers:
+            target_bumps = bumper.bump(target_bump_requirements)
+            bumps.extend(target_bumps)
 
-          for new_req in itertools.chain(*[b.requirements for b in target_bumps]):
-            if new_req.project_name in bump_requirements:
-              old_req = bump_requirements[new_req.project_name]
-              if str(old_req) == str(new_req) or new_req.specs and not old_req.specs or\
-                 new_req.specs and new_req.specs[0][0] == '==' and (not old_req.specs or old_req.specs[0][0] == '=='):
-                del bump_requirements[new_req.project_name]
-              new_target_bump_requirements[new_req.project_name] = new_req
+            filter_matched |= bumper.found_bump_requirements or len(target_bumps)
 
-        target_bump_requirements = new_target_bump_requirements
+            for new_req in itertools.chain(*[b.requirements for b in target_bumps]):
+              if new_req.project_name in bump_requirements:
+                old_req = bump_requirements[new_req.project_name]
+                if str(old_req) == str(new_req) or new_req.specs and not old_req.specs or\
+                   new_req.specs and new_req.specs[0][0] == '==' and (not old_req.specs or old_req.specs[0][0] == '=='):
+                  del bump_requirements[new_req.project_name]
+                new_target_bump_requirements[new_req.project_name] = new_req
 
-        if target_bump_requirements:
-          bump_requirements.update(target_bump_requirements)
-        else:
-          break
+          target_bump_requirements = new_target_bump_requirements
 
-    if not bumpers:
-      raise BumpAccident('No bumpers found for %s' % ', '.join(found_targets))
-
-    required_bumps = filter(lambda r: r.required, bump_requirements.values())
-
-    if required_bumps:
-      bumped = dict([b.name, b] for b in bumps)
-
-      for req in required_bumps:
-        if req.project_name in bumped:
-          bump = bumped[req.project_name]
-
-          if bump.satisfies(req):
-            continue
-
-          if req.required_by:
-            log.warn('Changes in %s requires %s, but %s is at %s.' % (req.required_by.name, str(req), req.project_name, bump.new_version))
+          if target_bump_requirements:
+            bump_requirements.update(target_bump_requirements)
           else:
-            log.warn('User required %s, but bump bumped to %s', str(req), bump.new_version)
+            break
 
-        if not self.full_throttle:
-          if not self.test_drive and bumps:
-            map(lambda b: b.reverse(), bumpers)
-          use_force = 'Use --force for force the bump' if req.required_by else ''
-          raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s' % (req, use_force))
+      if not bumpers:
+        raise BumpAccident('No bumpers found for %s' % ', '.join(found_targets))
 
-    if not filter_matched:
-      raise BumpAccident('None of the specified dependencies were found in %s' % ', '.join(found_targets))
+      required_bumps = filter(lambda r: r.required, bump_requirements.values())
 
-    if bumps:
-      if self.test_drive:
-        log.info("Changes that would be made:\n")
+      if required_bumps:
+        bumped = dict([b.name, b] for b in bumps)
 
-      messages = {}
+        for req in required_bumps:
+          if req.project_name in bumped:
+            bump = bumped[req.project_name]
 
-      for bumper in bumpers:
-        if bumper.bumps:
-          if self.test_drive or show_summary:
-            msg = bumper.bump_message(self.test_drive)
+            if bump.satisfies(req):
+              continue
 
-            if self.test_drive:
-              print msg
+            if req.required_by:
+              log.warn('Changes in %s requires %s, but %s is at %s.' % (req.required_by.name, str(req), req.project_name, bump.new_version))
             else:
-              if msg.startswith(('Bump ', 'Update ')):
-                msg = msg.replace('Bump ', 'Bumped ', 1).replace('Update ', 'Updated ', 1)
-              log.info(msg)
+              log.warn('User required %s, but bumped to %s', str(req), bump.new_version)
 
-          messages[bumper.target] = bumper.bump_message(True)
+          if not self.full_throttle:
+            use_force = 'Use --force for force the bump' if req.required_by else ''
+            raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s' % (req, use_force))
 
-      return messages
+      if not filter_matched:
+        raise BumpAccident('None of the specified dependencies were found in %s' % ', '.join(found_targets))
 
-    else:
-      log.info('No need to bump. Everything is up to date!')
-      return {}
+      if bumps:
+        if self.test_drive:
+          log.info("Changes that would be made:\n")
+
+        messages = {}
+
+        for bumper in bumpers:
+          if bumper.bumps:
+            if self.test_drive or show_summary:
+              msg = bumper.bump_message(self.test_drive)
+
+              if self.test_drive:
+                print msg
+              else:
+                if msg.startswith(('Bump ', 'Update ')):
+                  msg = msg.replace('Bump ', 'Bumped ', 1).replace('Update ', 'Updated ', 1)
+                log.info(msg)
+
+            messages[bumper.target] = bumper.bump_message(True)
+
+        return messages
+
+      else:
+        log.info('No need to bump. Everything is up to date!')
+        return {}
+
+    except Exception:
+      if not self.test_drive and bumps:
+        map(lambda b: b.reverse(), bumpers)
+      raise

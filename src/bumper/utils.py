@@ -16,7 +16,7 @@ def parse_requirements(names, in_file=None):
     sys.exit(1)
 
 
-class PYPI(object):
+class PyPI(object):
 
   @staticmethod
   def module_info(module):
@@ -33,8 +33,8 @@ class PYPI(object):
 
   @staticmethod
   def latest_module_version(module):
-    return PYPI.module_info(module)['info']['version']
+    return PyPI.module_info(module)['info']['version']
 
   @staticmethod
   def all_module_versions(module):
-    return sorted(PYPI.module_info(module)['releases'].keys(), key=lambda x: x.split(), reverse=True)
+    return sorted(PyPI.module_info(module)['releases'].keys(), key=lambda x: x.split(), reverse=True)

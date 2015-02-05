@@ -34,20 +34,24 @@ class BumpRequirement(object):
 class Bump(object):
   """ A change made in a target file. """
 
-  def __init__(self, name, new_version, changes=None):
+  def __init__(self, name, new_version, changes=None, requirements=None):
     self.name = name
     self.new_version = new_version
     self.changes = changes
     self.requirements = []
+    if requirements:
+      self.requires(requirements)
 
   @classmethod
   def from_requirement(cls, req):
-    return cls(req.project_name, ''.join(req.specs[0]))
+    return cls(req.project_name, req.specs and ''.join(req.specs[0]) or '')
 
   def requires(self, req):
-    req.required = True
-    req.required_by = self
-    self.requirements.append(req)
+    reqs = req if isinstance(req, list) else [req]
+    for req in reqs:
+      req.required = True
+      req.required_by = self
+      self.requirements.append(req)
 
   def satisfies(self, req):
     if req.project_name != self.name:
@@ -63,7 +67,9 @@ class Bump(object):
       return self.new_version in req
 
   def __str__(self):
-    if self.new_version.startswith(('<', '>', '=', '!')):
+    if not self.new_version:
+      return self.name
+    elif self.new_version.startswith(('<', '>', '=', '!')):
       return self.name + self.new_version
     else:
       return '%s to %s' + (self.name, self.new_version)
@@ -84,10 +90,20 @@ class AbstractBumper(object):
     self.original_target_content = None
     self.found_bump_requirements = False
     self.bumps = []
+    self.bumped = False
 
   @classmethod
   def likes(cls, target):
     """ Check if this bumper likes the target. """
+    raise NotImplementedError
+
+  def _bump(self, bump_requirements, **kwargs):
+    raise NotImplementedError
+
+  def bump_message(self, include_changes=False):
+    """
+      Compose a bump message for the given bumps
+    """
     raise NotImplementedError
 
   def bump(self, bump_requirements=None, **kwargs):
@@ -103,16 +119,12 @@ class AbstractBumper(object):
     with open(self.target) as fp:
       self.original_target_content = fp.read()
 
-    return self._bump(bump_requirements, **kwargs)
+    bumps = self._bump(bump_requirements, **kwargs)
 
-  def _bump(self, bump_requirements, **kwargs):
-    raise NotImplementedError
+    self.bumps.extend(bumps)
+    self.bumped = True
 
-  def bump_message(self, include_changes=False):
-    """
-      Compose a bump message for the given bumps
-    """
-    raise NotImplementedError
+    return bumps
 
   def reverse(self):
     """ Revert any bumps made. """
@@ -129,7 +141,7 @@ class RequirementsBumper(AbstractBumper):
 
   def _bump(self, bump_requirements=None, **kwargs):
     # Represents all requirements in the file that will be written out later (contains updated)
-    requirements = []
+    requirements = {}
 
     # Comments for requirements
     requirement_comments = {}
@@ -144,7 +156,7 @@ class RequirementsBumper(AbstractBumper):
         comments.append(req)
         continue
 
-      req = parse_requirements(req, file)[0]
+      req = parse_requirements(req, self.target)[0]
 
       if comments:
         requirement_comments[req.project_name] = '\n'.join(comments)
@@ -168,28 +180,43 @@ class RequirementsBumper(AbstractBumper):
               req = pkg_resources.Requirement.parse(req.project_name + op + latest_version)
               bumps.append(Bump(req.project_name, op + latest_version))
 
+        elif req.project_name in bump_requirements:
+          bump_requirements[req.project_name].required = False
+
       elif req.project_name in bump_requirements and bump_requirements[req.project_name].specs:
         self.found_bump_requirements = True
 
-        if str(req) != str(bump_requirements[req.project_name]):
+        if str(req) == str(bump_requirements[req.project_name]):
+          bump_requirements[req.project_name].required = False
+        else:
           req = bump_requirements[req.project_name]
-          all_module_versions = PYPI.all_module_versions(req.project_name)
-          if req.specs and not any(version in req for version in all_module_versions):
-            log.error('There are no published versions that satisfies %s', req)
-            log.info('Please change to match at least one of these: %s', ', '.join(all_module_versions[:10]))
-            sys.exit(1)
+          self._check_requirement(req)
           bumps.append(Bump.from_requirement(req))
 
-      requirements.append(req)
+      requirements[req.project_name] = req
+
+    for name, req in bump_requirements.items():
+      if req.required and name not in requirements:
+        try:
+          latest_version = PYPI.latest_module_version(name)
+        except Exception:
+          log.debug('Will not add new requirement for %s to %s as it is not published on PyPI', name, self.target)
+          continue
+
+        if self.target.endswith('pinned.txt') and (not req.specs or req.specs[0][0].startswith('>')):
+          req = pkg_resources.Requirement.parse(name + '==' + latest_version)
+        else:
+          self._check_requirement(req)
+
+        requirements[name] = req
+        bumps.append(Bump.from_requirement(req))
 
     if bumps and not self.test_drive:
-      with open(file, 'w') as fp:
-        for req in requirements:
-          if req.project_name in requirement_comments:
-            fp.write(requirement_comments[req.project_name] + '\n')
-          fp.write(str(req) + '\n')
-
-    self.bumps.extend(bumps)
+      with open(self.target, 'w') as fp:
+        for name in sorted(requirements):
+          if name in requirement_comments:
+            fp.write(requirement_comments[name] + '\n')
+          fp.write(str(requirements[name]) + '\n')
 
     return bumps
 
@@ -201,3 +228,10 @@ class RequirementsBumper(AbstractBumper):
     msg = 'Update %s: %s' % (os.path.basename(self.target), bumps)
 
     return msg
+
+  def _check_requirement(self, req):
+    all_module_versions = PYPI.all_module_versions(req.project_name)
+    if req.specs and not any(version in req for version in all_module_versions):
+      log.error('There are no published versions that satisfies %s', req)
+      log.info('Please change to match at least one of these: %s', ', '.join(all_module_versions[:10]))
+      sys.exit(1)

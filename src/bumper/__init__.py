@@ -23,6 +23,7 @@ def bump():
                       help='Add the `names` to the requirements file if they don\'t exist.')
   parser.add_argument('--file', help='Requirement file to bump. Defaults to requirements.txt and pinned.txt')
   parser.add_argument('--force', action='store_true', help='Force a bump even when certain bump requirements are not met.')
+  parser.add_argument('--verbose', action='store_true', help='Show detailed changes if available')
   parser.add_argument('-n', '--dry-run', action='store_true', help='Perform a dry run without making changes')
   parser.add_argument('--debug', action='store_true', help='Turn on debug mode')
 
@@ -33,7 +34,7 @@ def bump():
   logging.basicConfig(level=level, format='[%(levelname)s] %(message)s')
 
   try:
-    bumper = BumperDriver(targets, full_throttle=args.force, test_drive=args.dry_run)
+    bumper = BumperDriver(targets, full_throttle=args.force, detail=args.detail, test_drive=args.dry_run)
     bumper.bump(args.names, required=args.add)
   except Exception as e:
     if args.debug:
@@ -46,16 +47,18 @@ def bump():
 class BumperDriver(object):
   """ Driver that controls the main logic / coordinates the bumps with different bumper models (cars) """
 
-  def __init__(self, targets, bumper_models=None, full_throttle=False, test_drive=False):
+  def __init__(self, targets, bumper_models=None, full_throttle=False, detail=False, test_drive=False):
     """
     :param list targets: List of file paths to bump
     :param list bumper_models: List of bumper classes that implements :class:`bumper.cars.AbstractBumper`
     :param bool full_throttle: Force bumps even when required requirements are not met
+    :param bool detail: Generate detailed changes from changelog if possible.
     :param bool test_drive: Perform a dry run
     """
     self.targets = targets
     self.bumper_models = bumper_models or [RequirementsBumper]
     self.full_throttle = full_throttle
+    self.detail = detail
     self.test_drive = test_drive
 
   def bump(self, filter_requirements, required=False, show_summary=True, **kwargs):
@@ -92,7 +95,7 @@ class BumperDriver(object):
 
         while True:
           if not target_bumpers:
-            target_bumpers = [model(target, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
+            target_bumpers = [model(target, detail=self.detail, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
 
             if not target_bumpers:
               log.warn('No bumpers found that can bump %s', target)
@@ -167,13 +170,13 @@ class BumperDriver(object):
         for bumper in bumpers:
           if bumper.bumps:
             if self.test_drive or show_summary:
-              msg = bumper.bump_message(self.test_drive)
+              msg = bumper.bump_message(self.test_drive or self.detail)
 
               if self.test_drive:
                 print msg
               else:
-                if msg.startswith(('Bump ', 'Update ')):
-                  msg = msg.replace('Bump ', 'Bumped ', 1).replace('Update ', 'Updated ', 1)
+                if msg.startswith('Bump '):
+                  msg = msg.replace('Bump ', 'Bumped ', 1)
                 log.info(msg)
 
             messages[bumper.target] = bumper.bump_message(True)

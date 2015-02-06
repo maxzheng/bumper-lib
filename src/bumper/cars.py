@@ -75,9 +75,9 @@ class Bump(object):
     return '%s(%s, %s, reqs=%s)' % (self.__class__.__name__, self.name, self.new_version, len(self.requirements))
 
   @classmethod
-  def from_requirement(cls, req):
+  def from_requirement(cls, req, changes=None):
     """ Create an instance from :class:`pkg_resources.Requirement` instance """
-    return cls(req.project_name, req.specs and ''.join(req.specs[0]) or '')
+    return cls(req.project_name, req.specs and ''.join(req.specs[0]) or '', changes=changes)
 
   def requires(self, req):
     """ Add new requirements that must be fulfilled for this bump to occur """
@@ -105,12 +105,14 @@ class Bump(object):
 class AbstractBumper(object):
   """ Abstract implementation for all bumper cars """
 
-  def __init__(self, target, test_drive=False):
+  def __init__(self, target, detail=False, test_drive=False):
     """
       :param str target: Path to a target file to bump.
+      :param bool detail: Generate detailed changes from changelog if possible.
       :param bool test_drive: Perform a dry run
     """
     self.target = target
+    self.detail = detail
     self.test_drive = test_drive
     self.original_target_content = None
     self.found_bump_requirements = False
@@ -173,6 +175,12 @@ class AbstractBumper(object):
 class RequirementsBumper(AbstractBumper):
   """ Bumper for requirements.txt or pinned.txt """
 
+  def __init__(self, target, detail=False, test_drive=False):
+    super(RequirementsBumper, self).__init__(target, detail, test_drive)
+
+    #: Pin requirements to a specific version using '==' when appropriate
+    self.pin = target.endswith('pinned.txt')
+
   @classmethod
   def likes(cls, target):
     return target.endswith(('requirements.txt', 'pinned.txt'))
@@ -204,7 +212,7 @@ class RequirementsBumper(AbstractBumper):
         self.found_bump_requirements = True
 
         if req.specs:
-          latest_version = PyPI.latest_module_version(req.project_name)
+          latest_version = PyPI.latest_package_version(req.project_name)
           if latest_version in req:
             if req.project_name in bump_requirements:
               bump_requirements[req.project_name].required = False
@@ -219,8 +227,10 @@ class RequirementsBumper(AbstractBumper):
               log.warn('%s will not be bumped as it explicitly excludes latest version')
               op = None
             if op:
+              current_version = req.specs[0][1]
               req = pkg_resources.Requirement.parse(req.project_name + op + latest_version)
-              bumps.append(Bump(req.project_name, op + latest_version))
+              changes = PyPI.changes(req.project_name, current_version, latest_version) if self.detail else None
+              bumps.append(Bump(req.project_name, op + latest_version, changes=changes))
 
         elif req.project_name in bump_requirements:
           bump_requirements[req.project_name].required = False
@@ -231,21 +241,24 @@ class RequirementsBumper(AbstractBumper):
         if str(req) == str(bump_requirements[req.project_name]):
           bump_requirements[req.project_name].required = False
         else:
+          current_version = req.specs and req.specs[0][1]
           req = bump_requirements[req.project_name]
           self._check_requirement(req)
-          bumps.append(Bump.from_requirement(req))
+          changes = PyPI.changes(req.project_name, current_version, req.specs[0][1]) if self.detail else None
+          bumps.append(Bump.from_requirement(req, changes))
 
       requirements[req.project_name] = req
 
+    # Add new requirements
     for name, req in bump_requirements.items():
       if req.required and name not in requirements:
         try:
-          latest_version = PyPI.latest_module_version(name)
+          latest_version = PyPI.latest_package_version(name)
         except Exception:
           log.debug('Will not add new requirement for %s to %s as it is not published on PyPI', name, self.target)
           continue
 
-        if self.target.endswith('pinned.txt') and (not req.specs or req.specs[0][0].startswith('>')):
+        if self.pin and not req.specs:
           req = pkg_resources.Requirement.parse(name + '==' + latest_version)
         else:
           self._check_requirement(req)
@@ -267,14 +280,24 @@ class RequirementsBumper(AbstractBumper):
       return
 
     bumps = (' ').join(sorted([str(b) for b in self.bumps]))
-    msg = 'Update %s: %s' % (os.path.basename(self.target), bumps)
+    msg = 'Bump %s: %s' % (os.path.basename(self.target), bumps)
+
+    if include_changes:
+      changes = []
+      for bump in self.bumps:
+        if bump.changes:
+          changes.append(bump.name)
+          changes.append('  ' + '\n  '.join(bump.changes))
+          changes.append('')
+      if changes:
+        msg += '\n\n' + '\n'.join(changes)
 
     return msg
 
   def _check_requirement(self, req):
-    all_module_versions = PyPI.all_module_versions(req.project_name)
-    if req.specs and not any(version in req for version in all_module_versions):
+    all_package_versions = PyPI.all_package_versions(req.project_name)
+    if req.specs and not any(version in req for version in all_package_versions):
       msg = ('There are no published versions that satisfies %s\n        '
-             'Please change to match at least one of these: %s' % (req, ', '.join(all_module_versions[:10])))
+             'Please change to match at least one of these: %s' % (req, ', '.join(all_package_versions[:10])))
       raise BumpAccident(msg)
 

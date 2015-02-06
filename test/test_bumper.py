@@ -32,7 +32,7 @@ def test_bump_latest():
     bump()
 
     new_req = open('requirements.txt').read()
-    expect_req = 'localconfig==%s\n' % PyPI.latest_module_version('localconfig')
+    expect_req = 'localconfig==%s\n' % PyPI.latest_package_version('localconfig')
     assert 'localconfig==0.0.1' != new_req
     assert expect_req == new_req
 
@@ -46,7 +46,7 @@ def test_bump_filter():
     bump()
 
     new_req = open('requirements.txt').read()
-    expect_req = 'localconfig==0.0.1\nremoteconfig==%s\n' % PyPI.latest_module_version('remoteconfig')
+    expect_req = 'localconfig==0.0.1\nremoteconfig==%s\n' % PyPI.latest_package_version('remoteconfig')
     assert expect_req == new_req
 
 
@@ -59,7 +59,7 @@ def test_bump_add():
     bump()
 
     new_req = open('requirements.txt').read()
-    expect_req = 'clicast>=0.2\nlocalconfig==0.0.1\nremoteconfig==%s\nrequests\n' % PyPI.latest_module_version('remoteconfig')
+    expect_req = 'clicast>=0.2\nlocalconfig==0.0.1\nremoteconfig==%s\nrequests\n' % PyPI.latest_package_version('remoteconfig')
     assert expect_req == new_req
 
 

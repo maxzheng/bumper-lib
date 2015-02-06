@@ -63,6 +63,17 @@ class Bump(object):
     if requirements:
       self.requires(requirements)
 
+  def __str__(self):
+    if not self.new_version:
+      return self.name
+    elif self.new_version.startswith(('<', '>', '=', '!')):
+      return self.name + self.new_version
+    else:
+      return '%s to %s' + (self.name, self.new_version)
+
+  def __repr__(self):
+    return '%s(%s, %s, reqs=%s)' % (self.__class__.__name__, self.name, self.new_version, len(self.requirements))
+
   @classmethod
   def from_requirement(cls, req):
     """ Create an instance from :class:`pkg_resources.Requirement` instance """
@@ -90,14 +101,6 @@ class Bump(object):
     else:
       return self.new_version in req
 
-  def __str__(self):
-    if not self.new_version:
-      return self.name
-    elif self.new_version.startswith(('<', '>', '=', '!')):
-      return self.name + self.new_version
-    else:
-      return '%s to %s' + (self.name, self.new_version)
-
 
 class AbstractBumper(object):
   """ Abstract implementation for all bumper cars """
@@ -113,6 +116,9 @@ class AbstractBumper(object):
     self.found_bump_requirements = False
     self.bumps = []
     self.bumped = False
+
+  def __repr__(self):
+    return '%s(%s)' % (self.__class__.__name__, self.target)
 
   @classmethod
   def likes(cls, target):
@@ -146,8 +152,9 @@ class AbstractBumper(object):
       :param dict kwargs: Additional args from argparse. Some bumpers accept user options, and some not.
       :return: List of :class:`Bump` changes made.
     """
-    with open(self.target) as fp:
-      self.original_target_content = fp.read()
+    if not self.original_target_content:
+      with open(self.target) as fp:
+        self.original_target_content = fp.read()
 
     bumps = self._bump(bump_requirements, **kwargs)
 
@@ -198,7 +205,11 @@ class RequirementsBumper(AbstractBumper):
 
         if req.specs:
           latest_version = PyPI.latest_module_version(req.project_name)
-          if latest_version not in req:
+          if latest_version in req:
+            if req.project_name in bump_requirements:
+              bump_requirements[req.project_name].required = False
+
+          else:
             op = req.specs[0][0]
             if op == '<':
               op = '<='

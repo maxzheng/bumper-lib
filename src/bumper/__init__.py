@@ -114,7 +114,7 @@ class BumperDriver(object):
                 if str(old_req) == str(new_req) or new_req.specs and not old_req.specs or\
                    new_req.specs and new_req.specs[0][0] == '==' and (not old_req.specs or old_req.specs[0][0] == '=='):
                   del bump_requirements[new_req.project_name]
-                new_target_bump_requirements[new_req.project_name] = new_req
+              new_target_bump_requirements[new_req.project_name] = new_req
 
           target_bump_requirements = new_target_bump_requirements
 
@@ -145,7 +145,15 @@ class BumperDriver(object):
 
           if not self.full_throttle:
             use_force = 'Use --force for force the bump' if req.required_by else ''
-            raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s' % (req, use_force))
+
+            tip = RequirementsBumper in self.bumper_models and 'RequirementsBumper' not in [b.__class__.__name__ for b in bumpers]
+
+            if tip:
+              hint = '\n        Hint: If that is a 3rd party PyPI packages, please create requirements.txt or pinned.txt first.'
+            else:
+              hint = ''
+
+            raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s%s' % (req, use_force, hint))
 
       if not filter_matched:
         raise BumpAccident('None of the specified dependencies were found in %s' % ', '.join(found_targets))

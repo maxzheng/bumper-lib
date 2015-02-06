@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import os
 import setuptools
 
 
@@ -11,13 +10,10 @@ setuptools.setup(
   author='Max Zheng',
   author_email='maxzheng.os @t gmail.com',
 
-  description=open('README.rst').read(),
+  description='A library to bump / pin your dependency requirements.',
+  long_description=open('README.rst').read(),
 
-#  entry_points={
-#    'console_scripts': [
-#      'script_name = package.module:entry_callable',
-#    ],
-#  },
+  url='https://github.com/maxzheng/bumper-lib',
 
   install_requires=open('requirements.txt').read(),
 
@@ -29,13 +25,11 @@ setuptools.setup(
 
   setup_requires=['setuptools-git'],
 
-#  scripts=['bin/cast-example'],
-
   classifiers=[
     'Development Status :: 5 - Production/Stable',
 
     'Intended Audience :: Developers',
-    'Topic :: Software Development :: Development Utilities',
+    'Topic :: Software Development',
 
     'License :: OSI Approved :: MIT License',
 

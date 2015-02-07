@@ -1,5 +1,4 @@
 import logging
-import os
 import pkg_resources
 
 
@@ -279,8 +278,9 @@ class RequirementsBumper(AbstractBumper):
     if not self.bumps:
       return
 
-    bumps = (' ').join(sorted([str(b) for b in self.bumps]))
-    msg = 'Bump %s: %s' % (os.path.basename(self.target), bumps)
+    bumps = (', ').join(sorted([str(b) for b in self.bumps]))
+    bump_word = 'Pin' if self.pin else 'Require'
+    msg = '%s %s' % (bump_word, bumps)
 
     if include_changes:
       changes = []
@@ -300,4 +300,3 @@ class RequirementsBumper(AbstractBumper):
       msg = ('There are no published versions that satisfies %s\n        '
              'Please change to match at least one of these: %s' % (req, ', '.join(all_package_versions[:10])))
       raise BumpAccident(msg)
-

@@ -35,7 +35,7 @@ def bump():
 
   try:
     bumper = BumperDriver(targets, full_throttle=args.force, detail=args.verbose, test_drive=args.dry_run)
-    bumper.bump(args.names, required=args.add)
+    bumper.bump(args.names, required=args.add, show_detail=args.verbose)
   except Exception as e:
     if args.debug:
       raise
@@ -60,14 +60,17 @@ class BumperDriver(object):
     self.full_throttle = full_throttle
     self.detail = detail
     self.test_drive = test_drive
+    self.bumps = []
+    self.bumpers = []
 
-  def bump(self, filter_requirements, required=False, show_summary=True, **kwargs):
+  def bump(self, filter_requirements, required=False, show_summary=True, show_detail=False, **kwargs):
     """
     Bump dependency requirements using filter.
 
     :param list filter_requirements: List of dependency filter requirements.
     :param bool required: Require the filter_requirements to be met (by adding if possible).
     :param bool show_summary: Show summary for each bump made.
+    :param bool show_detail: Show detail for each bump made if available.
     :return: Dict of target file to bump message
     :raise BumpAccident: for any bump errors
     """
@@ -82,8 +85,6 @@ class BumperDriver(object):
       bump_requirements = dict([(r.project_name, BumpRequirement(r, required=required)) for r in requirements])
 
     filter_matched = not bump_requirements
-    bumpers = []
-    bumps = []
 
     try:
 
@@ -101,13 +102,13 @@ class BumperDriver(object):
               log.warn('No bumpers found that can bump %s', target)
               continue
 
-            bumpers.extend(target_bumpers)
+            self.bumpers.extend(target_bumpers)
 
           new_target_bump_requirements = {}
 
           for bumper in target_bumpers:
             target_bumps = bumper.bump(target_bump_requirements)
-            bumps.extend(target_bumps)
+            self.bumps.extend(target_bumps)
 
             filter_matched |= bumper.found_bump_requirements or len(target_bumps)
 
@@ -126,13 +127,13 @@ class BumperDriver(object):
           else:
             break
 
-      if not bumpers:
+      if not self.bumpers:
         raise BumpAccident('No bumpers found for %s' % ', '.join(found_targets))
 
       required_bumps = filter(lambda r: r.required, bump_requirements.values())
 
       if required_bumps:
-        bumped = dict([b.name, b] for b in bumps)
+        bumped = dict([b.name, b] for b in self.bumps)
 
         for req in required_bumps:
           if req.project_name in bumped:
@@ -149,7 +150,7 @@ class BumperDriver(object):
           if not self.full_throttle:
             use_force = 'Use --force for force the bump' if req.required_by else ''
 
-            tip = RequirementsBumper in self.bumper_models and 'RequirementsBumper' not in [b.__class__.__name__ for b in bumpers]
+            tip = RequirementsBumper in self.bumper_models and 'RequirementsBumper' not in [b.__class__.__name__ for b in self.bumpers]
 
             if tip:
               hint = '\n        Hint: If that is a 3rd party PyPI packages, please create requirements.txt or pinned.txt first.'
@@ -161,22 +162,22 @@ class BumperDriver(object):
       if not filter_matched:
         raise BumpAccident('None of the specified dependencies were found in %s' % ', '.join(found_targets))
 
-      if bumps:
+      if self.bumps:
         if self.test_drive:
           log.info("Changes that would be made:\n")
 
         messages = {}
 
-        for bumper in bumpers:
+        for bumper in self.bumpers:
           if bumper.bumps:
             if self.test_drive or show_summary:
-              msg = bumper.bump_message(self.test_drive or self.detail)
+              msg = bumper.bump_message(self.test_drive or show_detail)
 
               if self.test_drive:
                 print msg
               else:
-                if msg.startswith('Bump '):
-                  msg = msg.replace('Bump ', 'Bumped ', 1)
+                if msg.startswith(('Bump ', 'Pin ', 'Require ')):
+                  msg = msg.replace('Bump ', 'Bumped ').replace('Pin ', 'Pinned ').replace('Require ', 'Updated requirements: ')
                 log.info(msg)
 
             messages[bumper.target] = bumper.bump_message(True)
@@ -188,6 +189,11 @@ class BumperDriver(object):
         return {}
 
     except Exception:
-      if not self.test_drive and bumps:
-        map(lambda b: b.reverse(), bumpers)
+      if not self.test_drive and self.bumps:
+        map(lambda b: b.reverse(), self.bumpers)
       raise
+
+  def reverse(self):
+    """ Reverse all bumpers """
+    if not self.test_drive and self.bumps:
+      map(lambda b: b.reverse(), self.bumpers)

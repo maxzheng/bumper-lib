@@ -23,7 +23,7 @@ def bump():
                       help='Add the `names` to the requirements file if they don\'t exist.')
   parser.add_argument('--file', help='Requirement file to bump. Defaults to requirements.txt and pinned.txt')
   parser.add_argument('--force', action='store_true', help='Force a bump even when certain bump requirements are not met.')
-  parser.add_argument('--verbose', action='store_true', help='Show detailed changes if available')
+  parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed changes if available')
   parser.add_argument('-n', '--dry-run', action='store_true', help='Perform a dry run without making changes')
   parser.add_argument('--debug', action='store_true', help='Turn on debug mode')
 
@@ -34,7 +34,7 @@ def bump():
   logging.basicConfig(level=level, format='[%(levelname)s] %(message)s')
 
   try:
-    bumper = BumperDriver(targets, full_throttle=args.force, detail=args.detail, test_drive=args.dry_run)
+    bumper = BumperDriver(targets, full_throttle=args.force, detail=args.verbose, test_drive=args.dry_run)
     bumper.bump(args.names, required=args.add)
   except Exception as e:
     if args.debug:

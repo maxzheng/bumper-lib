@@ -1,10 +1,9 @@
 import argparse
-import itertools
 import logging
 import os
 import sys
 
-from bumper.cars import RequirementsBumper, BumpRequirement, BumpAccident
+from bumper.cars import RequirementsBumper, RequirementsManager, BumpAccident
 from bumper.utils import parse_requirements
 
 log = logging.getLogger(__name__)
@@ -23,7 +22,8 @@ def bump():
                       help='Add the `names` to the requirements file if they don\'t exist.')
   parser.add_argument('--file', help='Requirement file to bump. Defaults to requirements.txt and pinned.txt')
   parser.add_argument('--force', action='store_true', help='Force a bump even when certain bump requirements are not met.')
-  parser.add_argument('-v', '--verbose', action='store_true', help='Show detailed changes if available')
+  parser.add_argument('-d', '--detail', '--dependencies', action='store_true',
+                      help='If available, show detailed changes. For pinned.txt, pin parsed dependency requirements from changes')
   parser.add_argument('-n', '--dry-run', action='store_true', help='Perform a dry run without making changes')
   parser.add_argument('--debug', action='store_true', help='Turn on debug mode')
 
@@ -34,8 +34,8 @@ def bump():
   logging.basicConfig(level=level, format='[%(levelname)s] %(message)s')
 
   try:
-    bumper = BumperDriver(targets, full_throttle=args.force, detail=args.verbose, test_drive=args.dry_run)
-    bumper.bump(args.names, required=args.add, show_detail=args.verbose)
+    bumper = BumperDriver(targets, full_throttle=args.force, detail=args.detail, test_drive=args.dry_run)
+    bumper.bump(args.names, required=args.add, show_detail=args.detail)
   except Exception as e:
     if args.debug:
       raise
@@ -79,22 +79,29 @@ class BumperDriver(object):
     if not found_targets:
       raise BumpAccident('None of the requirement file(s) were found: %s' % ', '.join(self.targets))
 
-    bump_requirements = {}
+    bump_reqs = RequirementsManager()
+
     if filter_requirements:
       requirements = parse_requirements(filter_requirements)
-      bump_requirements = dict([(r.project_name, BumpRequirement(r, required=required)) for r in requirements])
-
-    filter_matched = not bump_requirements
+      bump_reqs.add(requirements, required=required)
 
     try:
 
       for target in found_targets:
-        log.debug('Bump target: %s', target)
+        log.debug('Target: %s', target)
 
         target_bumpers = []
-        target_bump_requirements = bump_requirements
+        target_bump_reqs = RequirementsManager(bump_reqs)
+        loops = 0
 
         while True:
+
+          # Insurance to ensure that we don't get stuck forever.
+          loops += 1
+          if loops > 5:
+            log.debug('Too many transitive bump loops. Bailing out.')
+            break
+
           if not target_bumpers:
             target_bumpers = [model(target, detail=self.detail, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
 
@@ -104,58 +111,40 @@ class BumperDriver(object):
 
             self.bumpers.extend(target_bumpers)
 
-          new_target_bump_requirements = {}
+          new_target_bump_reqs = RequirementsManager()
 
           for bumper in target_bumpers:
-            target_bumps = bumper.bump(target_bump_requirements)
+            target_bumps = bumper.bump(target_bump_reqs)
             self.bumps.extend(target_bumps)
 
-            filter_matched |= bumper.found_bump_requirements or len(target_bumps)
+            for bump in target_bumps:
+              if bump.requirements:
+                log.info('Changes in %s require: %s', bump.name, ', '.join(str(r) for r in bump.requirements))
 
-            for new_req in itertools.chain(*[b.requirements for b in target_bumps]):
-              new_target_bump_requirements[new_req.project_name] = new_req
+              for new_req in bump.requirements:
+                if not (bump_reqs.satisfied_by_checked(new_req) or target_bump_reqs.satisfied_by_checked(new_req)):
+                  new_target_bump_reqs.add(new_req)
 
-          target_bump_requirements = dict((n, new_target_bump_requirements[n]) for n in new_target_bump_requirements if n not in bump_requirements)
-          if new_target_bump_requirements:
-            bump_requirements.update(new_target_bump_requirements)
+          bump_reqs.matched_name |= target_bump_reqs.matched_name
+          bump_reqs.checked.extend(target_bump_reqs.checked)
+          target_bump_reqs = new_target_bump_reqs
 
-          if not target_bump_requirements:
+          if target_bump_reqs:
+            bump_reqs.add(target_bump_reqs)
+          else:
             break
 
       if not self.bumpers:
         raise BumpAccident('No bumpers found for %s' % ', '.join(found_targets))
 
-      required_bumps = filter(lambda r: r.required, bump_requirements.values())
-
-      if required_bumps:
-        bumped = dict([b.name, b] for b in self.bumps)
-
-        for req in required_bumps:
-          if req.project_name in bumped:
-            bump = bumped[req.project_name]
-
-            if bump.satisfies(req):
-              continue
-
-            if req.required_by:
-              log.warn('Changes in %s requires %s, but %s is at %s.' % (req.required_by.name, str(req), req.project_name, bump.new_version))
-            else:
-              log.warn('User required %s, but bumped to %s', str(req), bump.new_version)
-
+      for reqs in bump_reqs.required_requirements().values():
+        for req in reqs:
           if not self.full_throttle:
-            use_force = 'Use --force for force the bump' if req.required_by else ''
+            use_force = 'Use --force to ignore / force the bump' if req.required_by else ''
+            raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s' % (req, use_force))
 
-            tip = RequirementsBumper in self.bumper_models and 'RequirementsBumper' not in [b.__class__.__name__ for b in self.bumpers]
-
-            if tip:
-              hint = '\n        Hint: If that is a 3rd party PyPI packages, please create requirements.txt or pinned.txt first.'
-            else:
-              hint = ''
-
-            raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s%s' % (req, use_force, hint))
-
-      if not filter_matched:
-        raise BumpAccident('None of the specified dependencies were found in %s' % ', '.join(found_targets))
+      if bump_reqs and not bump_reqs.matched_name:
+        raise BumpAccident('None of the provided filter names were found in %s' % ', '.join(found_targets))
 
       if self.bumps:
         if self.test_drive:
@@ -165,6 +154,9 @@ class BumperDriver(object):
 
         for bumper in self.bumpers:
           if bumper.bumps:
+            if not self.test_drive:
+              bumper.update_requirements()
+
             if self.test_drive or show_summary:
               msg = bumper.bump_message(self.test_drive or show_detail)
 
@@ -172,7 +164,7 @@ class BumperDriver(object):
                 print msg
               else:
                 if msg.startswith(('Bump ', 'Pin ', 'Require ')):
-                  msg = msg.replace('Bump ', 'Bumped ').replace('Pin ', 'Pinned ').replace('Require ', 'Updated requirements: ')
+                  msg = msg.replace('Bump ', 'Bumped ', 1).replace('Pin ', 'Pinned ', 1).replace('Require ', 'Updated requirements: ', 1)
                 log.info(msg)
 
             messages[bumper.target] = bumper.bump_message(True)

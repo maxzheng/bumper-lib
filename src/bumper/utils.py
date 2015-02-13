@@ -1,9 +1,11 @@
 import logging
 import pkg_resources
 import re
+import sys
+
+from brownie.caching import memoize
 import requests
 import simplejson
-import sys
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +24,7 @@ class PyPI(object):
   """ Helper functions to get package info from PyPI """
 
   @staticmethod
+  @memoize
   def package_info(package):
     """ All package info for given package """
     package_json_url = 'https://pypi.python.org/pypi/%s/json' % package
@@ -33,22 +36,26 @@ class PyPI(object):
 
       return simplejson.loads(response.text)
     except Exception as e:
-      raise Exception('Could not get package info from %s: %s', package_json_url, e)
+      log.debug('Could not get package info from %s: %s', package_json_url, e)
 
   @staticmethod
   def latest_package_version(package):
     """ Latest version for package """
-    return PyPI.package_info(package)['info']['version']
+    info = PyPI.package_info(package)
+    return info and info['info']['version']
 
   @staticmethod
   def all_package_versions(package):
     """ All versions for package """
-    return sorted(PyPI.package_info(package)['releases'].keys(), key=lambda x: x.split(), reverse=True)
+    info = PyPI.package_info(package)
+    return info and sorted(info['releases'].keys(), key=lambda x: x.split(), reverse=True) or []
 
   @staticmethod
   def changes(package, current_version, new_version):
+    changes = []
+
     if not current_version:
-      return
+      return changes
 
     parsed_current_version = pkg_resources.parse_version(current_version)
     parsed_new_version = pkg_resources.parse_version(new_version)
@@ -85,7 +92,6 @@ class PyPI(object):
       changelog = PyPI._changelog(repo_url)
       version_re = re.compile('^(?:Version )?(\d+(?:\.\d+)+)', flags=re.IGNORECASE)
       hr_re = re.compile('^\s*(?:[\-=~+]+)\s*$')
-      changes = []
 
       if changelog:
         version = None
@@ -113,10 +119,10 @@ class PyPI(object):
               line = '+' + line.lstrip('-')
             changes.append(sign + '  ' + line)
 
-      return changes
-
     except Exception as e:
       log.debug(e)
+
+    return changes
 
   @staticmethod
   def _changelog(repo_url):

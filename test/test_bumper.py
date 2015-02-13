@@ -63,6 +63,26 @@ def test_bump_add():
     assert expect_req == new_req
 
 
+def test_bump_add_detail():
+  with temp_dir():
+    with open('requirements.txt', 'w') as fp:
+      fp.write('remoteconfig==0.0.1')
+
+    with open('pinned.txt', 'w') as fp:
+      fp.write('remoteconfig==0.0.1')
+
+    sys.argv = ['bump', 'remoteconfig>0.2,<0.2.5', '--detail']
+    bump()
+
+    new_req = open('requirements.txt').read()
+    expect_req = 'remoteconfig>0.2,<0.2.5\n'
+    assert expect_req == new_req
+
+    new_pinned = open('pinned.txt').read()
+    expect_pinned = 'localconfig==%s\nremoteconfig==0.2.4\n' % PyPI.latest_package_version('localconfig')
+    assert expect_pinned == new_pinned
+
+
 def test_bump_published_check():
   with temp_dir():
     orig_reqs = 'localconfig==0.0.1\nremoteconfig==0.0.1'
@@ -74,7 +94,7 @@ def test_bump_published_check():
       sys.argv = ['bump', 'remoteconfig', 'requests', 'clicast>1000', '--add', '--debug']
       bump()
 
-    assert 'no published versions' in str(e)
+    assert 'No published version could satisfy the requirement(s): clicast>1000' in str(e)
 
     reqs = open('requirements.txt').read()
     assert orig_reqs == reqs

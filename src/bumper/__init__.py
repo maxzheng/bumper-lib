@@ -113,18 +113,13 @@ class BumperDriver(object):
             filter_matched |= bumper.found_bump_requirements or len(target_bumps)
 
             for new_req in itertools.chain(*[b.requirements for b in target_bumps]):
-              if new_req.project_name in bump_requirements:
-                old_req = bump_requirements[new_req.project_name]
-                if str(old_req) == str(new_req) or new_req.specs and not old_req.specs or\
-                   new_req.specs and new_req.specs[0][0] == '==' and (not old_req.specs or old_req.specs[0][0] == '=='):
-                  del bump_requirements[new_req.project_name]
               new_target_bump_requirements[new_req.project_name] = new_req
 
-          target_bump_requirements = new_target_bump_requirements
+          target_bump_requirements = dict((n, new_target_bump_requirements[n]) for n in new_target_bump_requirements if n not in bump_requirements)
+          if new_target_bump_requirements:
+            bump_requirements.update(new_target_bump_requirements)
 
-          if target_bump_requirements:
-            bump_requirements.update(target_bump_requirements)
-          else:
+          if not target_bump_requirements:
             break
 
       if not self.bumpers:

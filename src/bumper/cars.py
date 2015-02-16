@@ -283,6 +283,12 @@ class AbstractBumper(object):
     requirements = []
     reqs_set = set()
 
+    if isinstance(changes, str):
+      changes = changes.split('\n')
+
+    if not changes or changes[0].startswith('-'):
+      return requirements
+
     for line in changes:
       line = line.strip(' -+*')
 

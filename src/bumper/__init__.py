@@ -163,8 +163,11 @@ class BumperDriver(object):
               if self.test_drive:
                 print msg
               else:
-                if msg.startswith(('Bump ', 'Pin ', 'Require ')):
-                  msg = msg.replace('Bump ', 'Bumped ', 1).replace('Pin ', 'Pinned ', 1).replace('Require ', 'Updated requirements: ', 1)
+                rewords = [('Bump ', 'Bumped '), ('Pin ', 'Pinned '), ('Require ', 'Updated requirements: ')]
+                for word, new_word in rewords:
+                  if msg.startswith(word):
+                    msg = msg.replace(word, new_word, 1)
+                    break
                 log.info(msg)
 
             messages[bumper.target] = bumper.bump_message(True)

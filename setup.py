@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
   name='bumper-lib',
-  version='0.1.5',
+  version='0.2.0',
 
   author='Max Zheng',
   author_email='maxzheng.os @t gmail.com',

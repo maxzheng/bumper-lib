@@ -1,5 +1,10 @@
-Version 0.2.1
+Version 0.2.2
 ================================================================================
+
+* Only reword first/one word when showing bump summary
+
+Version 0.2.1
+--------------------------------------------------------------------------------
 
 * Skip requirements parsing for changes when downgrading
 

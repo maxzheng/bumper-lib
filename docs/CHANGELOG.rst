@@ -1,5 +1,10 @@
-Version 0.2.0
+Version 0.2.1
 ================================================================================
+
+* Skip requirements parsing for changes when downgrading
+
+Version 0.2.0
+--------------------------------------------------------------------------------
 
 * Fully abstract bumper logic
 

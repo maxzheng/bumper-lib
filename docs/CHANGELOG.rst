@@ -1,5 +1,10 @@
-Version 0.2.3
+Version 0.2.4
 ================================================================================
+
+* Replace existing requirement instead of merging to ensure the proper bump requirement is updated
+
+Version 0.2.3
+--------------------------------------------------------------------------------
 
 * Move downgrade changes logic to abstract bumper
 

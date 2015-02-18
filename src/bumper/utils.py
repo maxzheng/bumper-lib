@@ -79,7 +79,7 @@ class PyPI(object):
 
       if not repo_url:
         log.debug('Could not find repo url for %s to get changelog', package)
-        return
+        return changes
 
       changelog = PyPI._changelog(repo_url)
       version_re = re.compile('^(?:Version )?(\d+(?:\.\d+)+)', flags=re.IGNORECASE)

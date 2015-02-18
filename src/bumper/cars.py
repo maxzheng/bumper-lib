@@ -6,9 +6,9 @@ import re
 from bumper.utils import parse_requirements, PyPI
 
 log = logging.getLogger(__name__)
-REQUIREMENTS_STR = '([\w\-]+)([>=<!\d+\.]+| to ([\d\.]+))?[, ]*'
+REQUIREMENTS_STR = '([\w\-]+)([>=<!\d+\.]+| to ([\d\.]+))?'
 REQUIREMENTS_RE = re.compile(REQUIREMENTS_STR)
-IS_REQUIREMENTS_RE = re.compile('^(?:Bump|Require|Pin|requires?) ((?:%s)+)$' % REQUIREMENTS_STR)
+IS_REQUIREMENTS_RE = re.compile('^(?:Bump|Require|Pin) ((?:%s)(?:, %s)*)$' % (REQUIREMENTS_STR, REQUIREMENTS_STR))
 IS_REQUIREMENTS_RE2 = re.compile('requires?=(\w+.+)')
 
 
@@ -306,7 +306,10 @@ class AbstractBumper(object):
 
           if req_str not in reqs_set:
             reqs_set.add(req_str)
-            requirements.append(pkg_resources.Requirement.parse(req_str))
+            try:
+              requirements.append(pkg_resources.Requirement.parse(req_str))
+            except Exception as e:
+              log.warn('Could not parse requirement "%s" from changes: %s', req_str, e)
 
     return requirements
 
@@ -344,8 +347,14 @@ class AbstractBumper(object):
     """ Update/persist requirements from `self.bumps` """
     raise NotImplementedError
 
-  def package_changes(self, name, current_version, new_version):
-    """ List of changes for package name from current_version to new_version, in descending order. """
+  def _package_changes(self, name, current_version, new_version):
+    """
+      List of changes for package name from current_version to new_version, in descending order.
+
+      :param str name: Name of package
+      :param current_version: Current version
+      :param new_version: New version. It is guaranteed to be higher than current version.
+    """
     raise NotImplementedError
 
   def all_package_versions(self, name):
@@ -359,6 +368,24 @@ class AbstractBumper(object):
   def should_pin(self):
     """ Should requirement be pinned? This should be True for leaf products. """
     return False
+
+  def package_changes(self, name, current_version, new_version):
+    """
+      List of changes for package name from current_version to new_version, in descending order.
+      If current version is higher than new version (downgrade), then a minus sign will be prefixed to each change.
+    """
+    if pkg_resources.parse_version(current_version) > pkg_resources.parse_version(new_version):
+      downgrade_sign = '- '
+      (current_version, new_version) = (new_version, current_version)
+    else:
+      downgrade_sign = None
+
+    changes = self._package_changes(name, current_version, new_version)
+
+    if changes and downgrade_sign:
+      changes = [downgrade_sign + c for c in changes]
+
+    return changes
 
   def latest_version_for_requirements(self, reqs):
     all_package_versions = self.all_package_versions(reqs[0].project_name)
@@ -418,6 +445,10 @@ class AbstractBumper(object):
       :raise BumpAccident:
     """
     if existing_req or bump_reqs and any(r.required for r in bump_reqs):
+      name = existing_req and existing_req.project_name or bump_reqs[0].project_name
+
+      log.info('Checking %s', name)
+
       bump = current_version = new_version = None
 
       if bump_reqs:
@@ -431,10 +462,10 @@ class AbstractBumper(object):
           if current_version == new_version:
             return None
 
-          bump = Bump(bump_reqs[0].project_name, ('==', new_version))
+          bump = Bump(name, ('==', new_version))
 
         elif len(bump_reqs) > 1:
-          raise BumpAccident('Not sure which requirement to use for %s: %s' % (bump_reqs[0].project_name, ', '.join(str(r) for r in bump_reqs)))
+          raise BumpAccident('Not sure which requirement to use for %s: %s' % (name, ', '.join(str(r) for r in bump_reqs)))
 
         # BR: Pin with One bump requirement or Filter with One or Many bump requirements or Bump to Any reuqired.
         elif bump_reqs[0].specs or not (existing_req or self.should_pin() or bump_reqs[0].specs):
@@ -448,12 +479,10 @@ class AbstractBumper(object):
           if current_version == new_version:
             return None
 
-          bump = Bump(bump_reqs[0].project_name, (','.join(s[0] + s[1] for s in bump_reqs[0].specs),))
+          bump = Bump(name, (','.join(s[0] + s[1] for s in bump_reqs[0].specs),))
 
       # BL: Pin to Latest
       if not bump and (existing_req and existing_req.specs and existing_req.specs[0][0] == '==' or self.should_pin() and not existing_req):
-        name = existing_req and existing_req.project_name or bump_reqs[0].project_name
-
         log.debug('Bump to latest: %s', bump_reqs or name)
 
         current_version = existing_req and existing_req.specs[0][1]
@@ -476,6 +505,9 @@ class AbstractBumper(object):
       if bump:
         log.debug('Bumped %s', bump)
 
+        if bump.requirements:
+          log.info('Changes in %s require: %s', bump.name, ', '.join(sorted(str(r) for r in bump.requirements)))
+
       return bump if str(bump) != str(existing_req) else None
 
   def bump(self, bump_reqs=None, **kwargs):
@@ -490,7 +522,7 @@ class AbstractBumper(object):
     # Represents only the updated requirements that will be used to generate commit msg.
     bumps = []
 
-    for existing_req in self.requirements():
+    for existing_req in sorted(self.requirements(), key=lambda r: r.project_name):
       bump_reqs.check(existing_req)
 
       if bump_reqs and existing_req.project_name not in bump_reqs:
@@ -602,7 +634,7 @@ class RequirementsBumper(AbstractBumper):
             fp.write(self.requirement_comments[name] + '\n')
           fp.write(str(self._requirements[name]) + '\n')
 
-  def package_changes(self, name, current_version, new_version):
+  def _package_changes(self, name, current_version, new_version):
     return PyPI.changes(name, current_version, new_version)
 
   def all_package_versions(self, name):

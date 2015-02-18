@@ -118,9 +118,6 @@ class BumperDriver(object):
             self.bumps.extend(target_bumps)
 
             for bump in target_bumps:
-              if bump.requirements:
-                log.info('Changes in %s require: %s', bump.name, ', '.join(str(r) for r in bump.requirements))
-
               for new_req in bump.requirements:
                 if not (bump_reqs.satisfied_by_checked(new_req) or target_bump_reqs.satisfied_by_checked(new_req)):
                   new_target_bump_reqs.add(new_req)

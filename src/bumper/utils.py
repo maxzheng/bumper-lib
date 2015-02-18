@@ -60,14 +60,6 @@ class PyPI(object):
     parsed_current_version = pkg_resources.parse_version(current_version)
     parsed_new_version = pkg_resources.parse_version(new_version)
 
-    if parsed_current_version >= parsed_new_version:
-      is_downgrade = True
-      (parsed_current_version, parsed_new_version) = (parsed_new_version, parsed_current_version)
-    else:
-      is_downgrade = False
-
-    log.info('Checking %s', package)
-
     try:
       package_info = PyPI.package_info(package)
 
@@ -108,8 +100,7 @@ class PyPI(object):
             if parsed_version <= parsed_current_version:
               break
             if parsed_version <= parsed_new_version:
-              sign = '- ' if is_downgrade else ''
-              changes.append(sign + version)
+              changes.append(version)
             else:
               version = None
             continue
@@ -117,7 +108,7 @@ class PyPI(object):
           if version:
             if line.startswith('- '):
               line = '+' + line.lstrip('-')
-            changes.append(sign + '  ' + line)
+            changes.append('  ' + line)
 
     except Exception as e:
       log.debug(e)

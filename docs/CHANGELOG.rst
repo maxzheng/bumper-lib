@@ -1,5 +1,10 @@
-Version 0.2.2
+Version 0.2.3
 ================================================================================
+
+* Move downgrade changes logic to abstract bumper
+
+Version 0.2.2
+--------------------------------------------------------------------------------
 
 * Only reword first/one word when showing bump summary
 

@@ -116,25 +116,27 @@ class RequirementsManager(object):
             add = False
             break
 
-          merge = False
+          # Need to replace existing as the new req will be used to bump next, and req.required could be updated.
+          replace = False
 
-          # Two pins: Use highest pinned version by merging
+          # Two pins: Use highest pinned version
           if req.specs and req.specs[0][0] == '==' and existing_req.specs and existing_req.specs[0][0] == '==':
-            if pkg_resources.parse_version(req.specs[0][1]) > pkg_resources.parse_version(existing_req.specs[0][1]):
-              existing_req.requirement = req.requirement
-            merge = True
+            if pkg_resources.parse_version(req.specs[0][1]) < pkg_resources.parse_version(existing_req.specs[0][1]):
+              req.requirement = existing_req.requirement
+            replace = True
 
-          # Merge Any
+          # Replace Any
           if not (req.specs and existing_req.specs):
-            if req.specs:
-              existing_req.requirement = req.requirement
-            merge = True
+            if existing_req.specs:
+              req.requirement = existing_req.requirement
+            replace = True
 
-          if merge:
-            existing_req.required |= req.required
-            if not existing_req.required_by and req.required_by:
-              existing_req.required_by = req.required_by
-            add = False
+          if replace:
+            req.required |= existing_req.required
+            if existing_req.required_by and not req.required_by:
+              req.required_by = existing_req.required_by
+            self.requirements[name].remove(existing_req)
+            break
 
       if add:
         self.requirements[name].append(req)

@@ -1,7 +1,7 @@
 Version 0.2.5
 ================================================================================
 
-* Return empty changes list insead of None
+* Return empty changes list instead of None
 
 Version 0.2.4
 --------------------------------------------------------------------------------

@@ -1,5 +1,10 @@
-Version 0.2.4
+Version 0.2.5
 ================================================================================
+
+* Return empty changes list insead of None
+
+Version 0.2.4
+--------------------------------------------------------------------------------
 
 * Replace existing requirement instead of merging to ensure the proper bump requirement is updated
 

@@ -1,5 +1,10 @@
-Version 0.2.5
+Version 0.2.6
 ================================================================================
+
+* Add should_add to check if a product name should be added to the bumper target
+
+Version 0.2.5
+--------------------------------------------------------------------------------
 
 * Return empty changes list instead of None
 

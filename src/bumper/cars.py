@@ -544,18 +544,19 @@ class AbstractBumper(object):
           log.warn(e)
 
     for reqs in bump_reqs.required_requirements().values():
-      try:
-        bump = self._bump(None, reqs)
+      if self.should_add(reqs[0].project_name):
+        try:
+          bump = self._bump(None, reqs)
 
-        if bump:
-          bump_reqs.check(bump)
-          bumps.append(bump)
+          if bump:
+            bump_reqs.check(bump)
+            bumps.append(bump)
 
-      except Exception as e:
-        if all(r.required_by is None for r in reqs):
-          raise
-        else:
-          log.warn(e)
+        except Exception as e:
+          if all(r.required_by is None for r in reqs):
+            raise
+          else:
+            log.warn(e)
 
     self.bumps.update(bumps)
 
@@ -586,6 +587,10 @@ class RequirementsBumper(AbstractBumper):
 
   def should_pin(self):
     return self.target.endswith('pinned.txt')
+
+  def should_add(self, name):
+    """ Should this bumper try to add the given name if requested. """
+    return True
 
   def bump_message(self, include_changes=False):
     if not self.bumps:

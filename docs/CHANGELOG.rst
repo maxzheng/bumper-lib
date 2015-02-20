@@ -1,5 +1,11 @@
-Version 0.2.6
+Version 0.2.7
 ================================================================================
+
+* Fix bump for package name / no version
+* Fix bumping to specific version
+
+Version 0.2.6
+--------------------------------------------------------------------------------
 
 * Add should_add to check if a product name should be added to the bumper target
 

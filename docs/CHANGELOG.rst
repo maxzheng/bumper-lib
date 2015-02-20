@@ -1,5 +1,10 @@
-Version 0.2.7
+Version 0.2.8
 ================================================================================
+
+* Only bump once per package and check requirements after all bumps are done to ensure all requirements are met
+
+Version 0.2.7
+--------------------------------------------------------------------------------
 
 * Fix bump for package name / no version
 * Fix bumping to specific version

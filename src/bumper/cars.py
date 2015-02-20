@@ -246,7 +246,10 @@ class Bump(object):
 
   def as_requirement(self):
     """ Convert back to a :class:`pkg_resources.Requirement` instance """
-    return pkg_resources.Requirement.parse(self.name + ''.join(self.new_version))
+    if self.new_version:
+      return pkg_resources.Requirement.parse(self.name + ''.join(self.new_version))
+    else:
+      return pkg_resources.Requirement.parse(self.name)
 
   def require(self, req):
     """ Add new requirements that must be fulfilled for this bump to occur """
@@ -481,7 +484,12 @@ class AbstractBumper(object):
           if current_version == new_version:
             return None
 
-          version = (','.join(s[0] + s[1] for s in bump_reqs[0].specs),) if len(bump_reqs[0].specs) > 1 else bump_reqs[0].specs[0]
+          if len(bump_reqs[0].specs) > 1:
+            version = (','.join(s[0] + s[1] for s in bump_reqs[0].specs),)
+          elif bump_reqs[0].specs:
+            version = bump_reqs[0].specs[0]
+          else:
+            version = None
           bump = Bump(name, version)
 
       # BL: Pin to Latest

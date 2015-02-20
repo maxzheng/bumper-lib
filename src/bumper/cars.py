@@ -530,8 +530,7 @@ class AbstractBumper(object):
       :return: List of :class:`Bump` changes made.
     """
 
-    # Represents only the updated requirements that will be used to generate commit msg.
-    bumps = []
+    bumps = {}
 
     for existing_req in sorted(self.requirements(), key=lambda r: r.project_name):
       bump_reqs.check(existing_req)
@@ -543,8 +542,7 @@ class AbstractBumper(object):
         bump = self._bump(existing_req, bump_reqs.get(existing_req.project_name))
 
         if bump:
-          bump_reqs.check(bump)
-          bumps.append(bump)
+          bumps[bump.name] = bump
 
       except Exception as e:
         if not bump_reqs or bump_reqs.get(existing_req.project_name) and all(r.required_by is None for r in bump_reqs.get(existing_req.project_name)):
@@ -553,13 +551,13 @@ class AbstractBumper(object):
           log.warn(e)
 
     for reqs in bump_reqs.required_requirements().values():
-      if self.should_add(reqs[0].project_name):
+      name = reqs[0].project_name
+      if name not in bumps and self.should_add(name):
         try:
           bump = self._bump(None, reqs)
 
           if bump:
-            bump_reqs.check(bump)
-            bumps.append(bump)
+            bumps[bump.name] = bump
 
         except Exception as e:
           if all(r.required_by is None for r in reqs):
@@ -567,9 +565,9 @@ class AbstractBumper(object):
           else:
             log.warn(e)
 
-    self.bumps.update(bumps)
+    self.bumps.update(bumps.values())
 
-    return bumps
+    return bumps.values()
 
   def reverse(self):
     """ Restore content in target file to be before any changes """

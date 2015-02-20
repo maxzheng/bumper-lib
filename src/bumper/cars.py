@@ -481,7 +481,8 @@ class AbstractBumper(object):
           if current_version == new_version:
             return None
 
-          bump = Bump(name, (','.join(s[0] + s[1] for s in bump_reqs[0].specs),))
+          version = (','.join(s[0] + s[1] for s in bump_reqs[0].specs),) if len(bump_reqs[0].specs) > 1 else bump_reqs[0].specs[0]
+          bump = Bump(name, version)
 
       # BL: Pin to Latest
       if not bump and (existing_req and existing_req.specs and existing_req.specs[0][0] == '==' or self.should_pin() and not existing_req):

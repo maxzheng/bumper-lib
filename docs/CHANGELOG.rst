@@ -1,5 +1,10 @@
-Version 0.2.8
+Version 0.2.9
 ================================================================================
+
+* Only check existing requirement for one that will be attempted to be bumped
+
+Version 0.2.8
+--------------------------------------------------------------------------------
 
 * Only bump once per package and check requirements after all bumps are done to ensure all requirements are met
 

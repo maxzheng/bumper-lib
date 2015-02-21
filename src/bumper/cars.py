@@ -533,10 +533,10 @@ class AbstractBumper(object):
     bumps = {}
 
     for existing_req in sorted(self.requirements(), key=lambda r: r.project_name):
-      bump_reqs.check(existing_req)
-
       if bump_reqs and existing_req.project_name not in bump_reqs:
         continue
+
+      bump_reqs.check(existing_req)
 
       try:
         bump = self._bump(existing_req, bump_reqs.get(existing_req.project_name))

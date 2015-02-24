@@ -71,7 +71,7 @@ class BumperDriver(object):
     :param bool required: Require the filter_requirements to be met (by adding if possible).
     :param bool show_summary: Show summary for each bump made.
     :param bool show_detail: Show detail for each bump made if available.
-    :return: Dict of target file to bump message
+    :return: Tuple with two elements: Dict of target file to bump message, List of :class:`Bump`
     :raise BumpAccident: for any bump errors
     """
     found_targets = [target for target in self.targets if os.path.exists(target)]
@@ -174,11 +174,11 @@ class BumperDriver(object):
 
             messages[bumper.target] = bumper.bump_message(True)
 
-        return messages
+        return messages, self.bumps
 
       else:
         log.info('No need to bump. Everything is up to date!')
-        return {}
+        return {}, []
 
     except Exception:
       if not self.test_drive and self.bumps:

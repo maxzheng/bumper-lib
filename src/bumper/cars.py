@@ -543,6 +543,7 @@ class AbstractBumper(object):
 
         if bump:
           bumps[bump.name] = bump
+          bump_reqs.check(bump)
 
       except Exception as e:
         if not bump_reqs or bump_reqs.get(existing_req.project_name) and all(r.required_by is None for r in bump_reqs.get(existing_req.project_name)):
@@ -558,6 +559,7 @@ class AbstractBumper(object):
 
           if bump:
             bumps[bump.name] = bump
+            bump_reqs.check(bump)
 
         except Exception as e:
           if all(r.required_by is None for r in reqs):

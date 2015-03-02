@@ -1,5 +1,10 @@
-Version 0.2.10
+Version 0.2.11
 ================================================================================
+
+* Check bumps to see if they satisfy any requirements so we do not try to bump again
+
+Version 0.2.10
+--------------------------------------------------------------------------------
 
 * Return bumps made for BumperDriver.bump()
 

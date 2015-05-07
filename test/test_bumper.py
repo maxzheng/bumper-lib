@@ -79,7 +79,7 @@ def test_bump_add_detail():
     assert expect_req == new_req
 
     new_pinned = open('pinned.txt').read()
-    expect_pinned = 'localconfig==%s\nremoteconfig==0.2.4\n' % PyPI.latest_package_version('localconfig')
+    expect_pinned = 'remoteconfig==0.2.4\n'
     assert expect_pinned == new_pinned
 
 

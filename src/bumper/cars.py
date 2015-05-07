@@ -300,7 +300,7 @@ class AbstractBumper(object):
       if not line:
         continue
 
-      match = IS_REQUIREMENTS_RE.match(line) or IS_REQUIREMENTS_RE2.search(line)
+      match = IS_REQUIREMENTS_RE2.search(line)  # or  IS_REQUIREMENTS_RE.match(line)
       if match:
         for match in REQUIREMENTS_RE.findall(match.group(1)):
           if match[1]:

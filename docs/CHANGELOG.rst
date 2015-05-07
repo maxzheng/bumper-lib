@@ -1,5 +1,10 @@
-Version 0.2.11
+Version 0.2.12
 ================================================================================
+
+* Remove transitive dependency parsing with Bump/Require/Pin commit words
+
+Version 0.2.11
+--------------------------------------------------------------------------------
 
 * Check bumps to see if they satisfy any requirements so we do not try to bump again
 

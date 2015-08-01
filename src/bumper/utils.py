@@ -1,3 +1,4 @@
+import base64
 import logging
 import pkg_resources
 import re
@@ -118,19 +119,49 @@ class PyPI(object):
   @staticmethod
   def _changelog(repo_url):
     if 'github.com' in repo_url:
-      repo_url = repo_url.replace('github.com', 'raw.githubusercontent.com').replace('http:', 'https:')
-      repo_url += '/master'
+      repo_url = repo_url.replace('github.com', 'api.github.com/repos').replace('http:', 'https:') + '/contents'
+      doc_dirs = []
 
-    for change_ext in ['rst', 'md', 'txt']:
-      for change_name in ['CHANGELOG', 'HISTORY', 'CHANGES', 'changes']:
-        for subfolder in ['', 'docs']:
-          changelog_url = '%s/%s/%s.%s' % (repo_url, subfolder, change_name, change_ext)
-          log.debug('Trying %s', changelog_url)
+      def get_changelog(repo_url, entry):
+        if entry['type'] == 'file' and entry['name'].lower().startswith(('change', 'history')):
           try:
-            response = requests.get(changelog_url, timeout=5)
+            response = requests.get(repo_url + '/' + entry['name'], timeout=5)
             response.raise_for_status()
 
-            return response.text
+            return base64.decodestring(response.json()['content'])
 
-          except Exception:
-            pass
+          except Exception as e:
+            log.debug(e)
+
+      try:
+        for entry in requests.get(repo_url, timeout=5).json():
+          changelog = get_changelog(repo_url, entry)
+          if changelog:
+            return changelog
+
+          elif entry['type'] == 'dir' and entry['name'].lower().startswith('doc'):
+            doc_dirs.append(entry['name'])
+
+        for doc_dir in doc_dirs:
+          for entry in requests.get(repo_url + '/' + doc_dir, timeout=5).json():
+            changelog = get_changelog(repo_url + '/' + doc_dir, entry)
+            if changelog:
+              return changelog
+
+      except Exception as e:
+        log.debug(e)
+
+    else:
+      for change_ext in ['rst', 'md', 'txt', None]:
+        for change_name in ['CHANGELOG', 'HISTORY', 'CHANGES', 'changes']:
+          for subfolder in ['', 'docs']:
+            changelog_url = '%s/%s/%s%s' % (repo_url, subfolder, change_name, '.' + change_ext if change_ext else '')
+            log.debug('Trying %s', changelog_url)
+            try:
+              response = requests.get(changelog_url, timeout=5)
+              response.raise_for_status()
+
+              return response.text
+
+            except Exception:
+              pass

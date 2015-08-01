@@ -1,5 +1,10 @@
-Version 0.2.12
+Version 0.2.13
 ================================================================================
+
+* Optimize changelog search using github REST endpoint
+
+Version 0.2.12
+--------------------------------------------------------------------------------
 
 * Remove transitive dependency parsing with Bump/Require/Pin commit words
 

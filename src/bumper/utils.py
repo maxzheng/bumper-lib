@@ -112,7 +112,7 @@ class PyPI(object):
             changes.append('  ' + line)
 
     except Exception as e:
-      log.debug(e)
+      log.debug('Could not parse changelog file: %s', e)
 
     return changes
 
@@ -131,7 +131,7 @@ class PyPI(object):
             return base64.decodestring(response.json()['content'])
 
           except Exception as e:
-            log.debug(e)
+            log.debug('%s/%s: %s' % (repo_url, entry['name'], e))
 
       try:
         for entry in requests.get(repo_url, timeout=5).json():
@@ -149,7 +149,7 @@ class PyPI(object):
               return changelog
 
       except Exception as e:
-        log.debug(e)
+        log.debug('Could not find changelog file: %s', e)
 
     else:
       for change_ext in ['rst', 'md', 'txt', None]:

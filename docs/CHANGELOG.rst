@@ -1,5 +1,11 @@
-Version 0.2.13
+Version 0.2.14
 ================================================================================
+
+* Treat bad requirements as comment so bumping will work
+* Better debug log message when failing to get changelog
+
+Version 0.2.13
+--------------------------------------------------------------------------------
 
 * Optimize changelog search using github REST endpoint
 

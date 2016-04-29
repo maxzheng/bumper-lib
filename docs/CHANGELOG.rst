@@ -1,5 +1,10 @@
-Version 0.2.15
+Version 0.2.16
 ================================================================================
+
+* Print warning for single bump failure when no requirements are provided
+
+Version 0.2.15
+--------------------------------------------------------------------------------
 
 * Support recursive requirements and ignore other meta flags
 

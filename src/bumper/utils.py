@@ -2,7 +2,6 @@ import base64
 import logging
 import pkg_resources
 import re
-import sys
 
 from brownie.caching import memoize
 import requests
@@ -12,13 +11,19 @@ log = logging.getLogger(__name__)
 
 
 def parse_requirements(requirements, in_file=None):
-  """ Parse string requirements into list of :class:`pkg_resources.Requirement` instances """
+  """
+    Parse string requirements into list of :class:`pkg_resources.Requirement` instances
+
+    :param str requirements: Requirements text to parse
+    :param str in_file: File the requirements came from
+    :return: List of requirements
+    :raises ValueError: if failed to parse
+  """
   try:
     return list(pkg_resources.parse_requirements(requirements))
   except Exception as e:
     in_file = ' in %s' % in_file if in_file else ''
-    log.error(' '.join(e) + in_file)
-    sys.exit(1)
+    raise ValueError(' '.join(e) + in_file)
 
 
 class PyPI(object):

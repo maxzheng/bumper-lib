@@ -581,6 +581,8 @@ class AbstractBumper(object):
 class RequirementsBumper(AbstractBumper):
   """ Bumper for requirements.txt or pinned.txt """
 
+  LAST_COMMENT_NAME = '__last_comment__'
+
   def __init__(self, target, detail=False, test_drive=False):
     super(RequirementsBumper, self).__init__(target, detail, test_drive)
 
@@ -630,12 +632,21 @@ class RequirementsBumper(AbstractBumper):
           comments.append(req)
           continue
 
-        req = parse_requirements(req, self.target)[0]
+        try:
+          req = parse_requirements(req, self.target)[0]
+        except ValueError as e:  # Treat failed requireents as comments so they stay intact
+          log.info('Ignoring unsupported requirement: ' + str(e))
+          comments.append(req)
+          continue
+
         self._requirements[req.project_name] = req
 
         if comments:
           self.requirement_comments[req.project_name] = '\n'.join(comments)
           comments = []
+
+      if comments:
+        self.requirement_comments[self.LAST_COMMENT_NAME] = '\n'.join(comments)
 
     return self._requirements.values()
 
@@ -649,6 +660,9 @@ class RequirementsBumper(AbstractBumper):
           if name in self.requirement_comments:
             fp.write(self.requirement_comments[name] + '\n')
           fp.write(str(self._requirements[name]) + '\n')
+
+        if self.LAST_COMMENT_NAME in self.requirement_comments:
+          fp.write(self.requirement_comments[self.LAST_COMMENT_NAME] + '\n')
 
   def _package_changes(self, name, current_version, new_version):
     return PyPI.changes(name, current_version, new_version)

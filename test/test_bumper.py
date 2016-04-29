@@ -37,6 +37,23 @@ def test_bump_latest():
     assert expect_req == new_req
 
 
+def test_bump_bad_requirements():
+  with temp_dir():
+    with open('requirements.txt', 'w') as fp:
+      fp.write('git+https://github.com/someversion@blah@blah=blah\n')
+      fp.write('localconfig==0.0.1\n')
+      fp.write('http://github.com/someversion@blah@blah=blah')
+
+    bump()
+
+    new_req = open('requirements.txt').read()
+    expect_req = ('git+https://github.com/someversion@blah@blah=blah\n' +
+                  'localconfig==%s\n' % PyPI.latest_package_version('localconfig') +
+                  'http://github.com/someversion@blah@blah=blah\n')
+    assert 'localconfig==0.0.1' != new_req
+    assert expect_req == new_req
+
+
 def test_bump_filter():
   with temp_dir():
     with open('requirements.txt', 'w') as fp:

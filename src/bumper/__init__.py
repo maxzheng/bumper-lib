@@ -47,16 +47,18 @@ def bump():
 class BumperDriver(object):
   """ Driver that controls the main logic / coordinates the bumps with different bumper models (cars) """
 
-  def __init__(self, targets, bumper_models=None, full_throttle=False, detail=False, test_drive=False):
+  def __init__(self, targets, bumper_models=None, default_model=RequirementsBumper, full_throttle=False, detail=False, test_drive=False):
     """
     :param list targets: List of file paths to bump
     :param list bumper_models: List of bumper classes that implements :class:`bumper.cars.AbstractBumper`
+    :param AbstractBumper default_model: Default bumper class if none of the bumper_models likes the target.
     :param bool full_throttle: Force bumps even when required requirements are not met
     :param bool detail: Generate detailed changes from changelog if possible.
     :param bool test_drive: Perform a dry run
     """
-    self.targets = targets
-    self.bumper_models = bumper_models or [RequirementsBumper]
+    self.targets = self._expand_targets(targets)
+    self.default_model = default_model
+    self.bumper_models = bumper_models or [self.default_model]
     self.full_throttle = full_throttle
     self.detail = detail
     self.test_drive = test_drive
@@ -106,8 +108,8 @@ class BumperDriver(object):
             target_bumpers = [model(target, detail=self.detail, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
 
             if not target_bumpers:
-              log.warn('No bumpers found that can bump %s', target)
-              continue
+              log.debug('No bumpers found that can bump %s. Defaulting to %s', target, self.default_model)
+              target_bumpers = [self.default_model(target, detail=self.detail, test_drive=self.test_drive)]
 
             self.bumpers.extend(target_bumpers)
 
@@ -189,3 +191,24 @@ class BumperDriver(object):
     """ Reverse all bumpers """
     if not self.test_drive and self.bumps:
       map(lambda b: b.reverse(), self.bumpers)
+
+  def _expand_targets(self, targets, base_dir=None):
+    """ Expand targets by looking for '-r' in targets. """
+    all_targets = []
+
+    for target in targets:
+      target_dirs = [p for p in [base_dir, os.path.dirname(target)] if p]
+      target_dir = target_dirs and os.path.join(*target_dirs) or ''
+      target = os.path.basename(target)
+      target_path = os.path.join(target_dir, target)
+
+      if os.path.exists(target_path):
+        all_targets.append(target_path)
+
+        with open(target_path) as fp:
+          for line in fp:
+            if line.startswith('-r '):
+              _, new_target = line.split(' ', 1)
+              all_targets.extend(self._expand_targets([new_target.strip()], base_dir=target_dir))
+
+    return all_targets

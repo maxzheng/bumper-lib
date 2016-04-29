@@ -628,7 +628,7 @@ class RequirementsBumper(AbstractBumper):
       comments = []
 
       for req in self.original_target_content.strip().split('\n'):
-        if not req or req.startswith('#'):
+        if not req or req.startswith(('#', '-r ', '- e', 'http:', 'https:', 'svn+', 'git+', 'git:', 'hg+', 'bzr+', '--')):
           comments.append(req)
           continue
 

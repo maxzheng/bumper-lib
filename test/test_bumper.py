@@ -1,3 +1,4 @@
+import os
 import sys
 
 from bumper import bump, BumpAccident
@@ -32,6 +33,28 @@ def test_bump_latest():
     bump()
 
     new_req = open('requirements.txt').read()
+    expect_req = 'localconfig==%s\n' % PyPI.latest_package_version('localconfig')
+    assert 'localconfig==0.0.1' != new_req
+    assert expect_req == new_req
+
+
+def test_bump_recursive():
+  with temp_dir():
+    with open('requirements.txt', 'w') as fp:
+      fp.write('-r requirements/prod.txt\n')
+      fp.write('localconfig==0.0.1')
+    os.mkdir('requirements')
+    with open('requirements/prod.txt', 'w') as fp:
+      fp.write('localconfig==0.0.1')
+
+    bump()
+
+    new_req = open('requirements.txt').read()
+    expect_req = '-r requirements/prod.txt\nlocalconfig==%s\n' % PyPI.latest_package_version('localconfig')
+    assert 'localconfig==0.0.1' != new_req
+    assert expect_req == new_req
+
+    new_req = open('requirements/prod.txt').read()
     expect_req = 'localconfig==%s\n' % PyPI.latest_package_version('localconfig')
     assert 'localconfig==0.0.1' != new_req
     assert expect_req == new_req

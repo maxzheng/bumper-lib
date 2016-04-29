@@ -1,5 +1,10 @@
-Version 0.2.14
+Version 0.2.15
 ================================================================================
+
+* Support recursive requirements and ignore other meta flags
+
+Version 0.2.14
+--------------------------------------------------------------------------------
 
 * Treat bad requirements as comment so bumping will work
 * Better debug log message when failing to get changelog

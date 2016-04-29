@@ -546,7 +546,7 @@ class AbstractBumper(object):
           bump_reqs.check(bump)
 
       except Exception as e:
-        if not bump_reqs or bump_reqs.get(existing_req.project_name) and all(r.required_by is None for r in bump_reqs.get(existing_req.project_name)):
+        if bump_reqs and bump_reqs.get(existing_req.project_name) and all(r.required_by is None for r in bump_reqs.get(existing_req.project_name)):
           raise
         else:
           log.warn(e)

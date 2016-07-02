@@ -165,7 +165,7 @@ class BumperDriver(object):
               msg = bumper.bump_message(self.test_drive or show_detail)
 
               if self.test_drive:
-                print msg
+                print(msg)
               else:
                 rewords = [('Bump ', 'Bumped '), ('Pin ', 'Pinned '), ('Require ', 'Updated requirements: ')]
                 for word, new_word in rewords:

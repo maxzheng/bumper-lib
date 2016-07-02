@@ -1,5 +1,12 @@
-Version 0.2.16
+Version 0.2.17
 ================================================================================
+
+* Python 3 compatible & tests
+* Use print()
+* Remove use of --download-cache option
+
+Version 0.2.16
+--------------------------------------------------------------------------------
 
 * Print warning for single bump failure when no requirements are provided
 

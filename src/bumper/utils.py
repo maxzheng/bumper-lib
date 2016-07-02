@@ -3,7 +3,6 @@ import logging
 import pkg_resources
 import re
 
-from brownie.caching import memoize
 import requests
 import simplejson
 
@@ -29,20 +28,27 @@ def parse_requirements(requirements, in_file=None):
 class PyPI(object):
   """ Helper functions to get package info from PyPI """
 
-  @staticmethod
-  @memoize
-  def package_info(package):
+  package_info_cache = {}
+
+  @classmethod
+  def package_info(cls, package):
     """ All package info for given package """
-    package_json_url = 'https://pypi.python.org/pypi/%s/json' % package
 
-    try:
-      logging.getLogger('requests').setLevel(logging.WARN)
-      response = requests.get(package_json_url)
-      response.raise_for_status()
+    if package not in cls.package_info_cache:
+      package_json_url = 'https://pypi.python.org/pypi/%s/json' % package
 
-      return simplejson.loads(response.text)
-    except Exception as e:
-      log.debug('Could not get package info from %s: %s', package_json_url, e)
+      try:
+        logging.getLogger('requests').setLevel(logging.WARN)
+        response = requests.get(package_json_url)
+        response.raise_for_status()
+
+        cls.package_info_cache[package] = simplejson.loads(response.text)
+
+      except Exception as e:
+        log.debug('Could not get package info from %s: %s', package_json_url, e)
+        cls.package_info_cache[package] = None
+
+    return cls.package_info_cache[package]
 
   @staticmethod
   def latest_package_version(package):

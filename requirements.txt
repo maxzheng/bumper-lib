@@ -1,3 +1,2 @@
-brownie
 requests
 simplejson

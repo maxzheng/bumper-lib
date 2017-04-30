@@ -6,13 +6,13 @@ from tempfile import mkdtemp
 
 @contextmanager
 def temp_dir():
-  try:
-    cwd = os.getcwd()
-    dtemp = mkdtemp()
-    os.chdir(dtemp)
+    try:
+        cwd = os.getcwd()
+        dtemp = mkdtemp()
+        os.chdir(dtemp)
 
-    yield dtemp
+        yield dtemp
 
-  finally:
-    os.chdir(cwd)
-    shutil.rmtree(dtemp)
+    finally:
+        os.chdir(cwd)
+        shutil.rmtree(dtemp)

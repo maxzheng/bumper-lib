@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
   name='bumper-lib',
-  version='0.2.17',
+  version='1.0.0',
 
   author='Max Zheng',
   author_email='maxzheng.os @t gmail.com',
@@ -19,8 +19,7 @@ setuptools.setup(
 
   license='MIT',
 
-  package_dir={'': 'src'},
-  packages=setuptools.find_packages('src'),
+  packages=setuptools.find_packages(),
   include_package_data=True,
 
   setup_requires=['setuptools-git'],

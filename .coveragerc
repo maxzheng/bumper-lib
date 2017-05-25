@@ -1,5 +1,7 @@
 [run]
 omit =
-    setup.py
+    .git/*
     .tox/*
+    docs/*
+    setup.py
     test/*

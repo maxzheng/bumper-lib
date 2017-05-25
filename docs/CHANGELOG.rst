@@ -1,3 +1,13 @@
+Version 2.0.0
+================================================================================
+
+* Code cleanup and switch to Python 3 only
+  
+  1) Switch to use new tox.ini template (Python 3 only)
+  2) Move sources to top level without src
+  3) Change indent from 2 to 4 spaces.
+* Add Python 3 classifier
+
 Version 0.2.17
 ================================================================================
 

@@ -8,7 +8,7 @@ setuptools.setup(
   version='2.0.1',
 
   author='Max Zheng',
-  author_email='maxzheng.os @t gmail.com',
+  author_email='maxzheng.os@gmail.com',
 
   description='A library to bump / pin your dependency requirements.',
   long_description=open('README.rst').read(),

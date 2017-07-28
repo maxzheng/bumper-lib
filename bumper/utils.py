@@ -139,7 +139,7 @@ class PyPI(object):
                         response = requests.get(repo_url + '/' + entry['name'], timeout=5)
                         response.raise_for_status()
 
-                        return base64.decodestring(response.json()['content'].encode())
+                        return base64.decodebytes(response.json()['content'].encode()).decode('utf-8')
 
                     except Exception as e:
                         log.debug('%s/%s: %s' % (repo_url, entry['name'], e))

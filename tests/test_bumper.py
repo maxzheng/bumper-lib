@@ -8,6 +8,11 @@ import pytest
 from test_stubs import temp_dir
 
 
+@pytest.fixture(autouse=True)
+def mock_argv(monkeypatch):
+    monkeypatch.setattr('sys.argv', ['bump'])
+
+
 def test_bump_no_file():
     with temp_dir():
         with pytest.raises(SystemExit):
@@ -99,7 +104,8 @@ def test_bump_add():
         bump()
 
         new_req = open('requirements.txt').read()
-        expect_req = 'clicast>=0.2\nlocalconfig==0.0.1\nremoteconfig==%s\nrequests\n' % PyPI.latest_package_version('remoteconfig')
+        expect_req = 'clicast>=0.2\nlocalconfig==0.0.1\nremoteconfig=={}\nrequests\n'.format(
+            PyPI.latest_package_version('remoteconfig'))
         assert expect_req == new_req
 
 

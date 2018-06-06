@@ -21,9 +21,11 @@ def bump():
     parser.add_argument('--add', '--require', action='store_true',
                         help='Add the `names` to the requirements file if they don\'t exist.')
     parser.add_argument('--file', help='Requirement file to bump. Defaults to requirements.txt and pinned.txt')
-    parser.add_argument('--force', action='store_true', help='Force a bump even when certain bump requirements are not met.')
+    parser.add_argument('--force', action='store_true',
+                        help='Force a bump even when certain bump requirements are not met.')
     parser.add_argument('-d', '--detail', '--dependencies', action='store_true',
-                        help='If available, show detailed changes. For pinned.txt, pin parsed dependency requirements from changes')
+                        help='If available, show detailed changes. '
+                             'For pinned.txt, pin parsed dependency requirements from changes')
     parser.add_argument('-n', '--dry-run', action='store_true', help='Perform a dry run without making changes')
     parser.add_argument('--debug', action='store_true', help='Turn on debug mode')
 
@@ -47,7 +49,8 @@ def bump():
 class BumperDriver(object):
     """ Driver that controls the main logic / coordinates the bumps with different bumper models (cars) """
 
-    def __init__(self, targets, bumper_models=None, default_model=RequirementsBumper, full_throttle=False, detail=False, test_drive=False):
+    def __init__(self, targets, bumper_models=None, default_model=RequirementsBumper, full_throttle=False,
+                 detail=False, test_drive=False):
         """
         :param list targets: List of file paths to bump
         :param list bumper_models: List of bumper classes that implements :class:`bumper.cars.AbstractBumper`
@@ -105,11 +108,13 @@ class BumperDriver(object):
                         break
 
                     if not target_bumpers:
-                        target_bumpers = [model(target, detail=self.detail, test_drive=self.test_drive) for model in self.bumper_models if model.likes(target)]
+                        target_bumpers = [model(target, detail=self.detail, test_drive=self.test_drive)
+                                          for model in self.bumper_models if model.likes(target)]
 
                         if not target_bumpers:
                             log.debug('No bumpers found that can bump %s. Defaulting to %s', target, self.default_model)
-                            target_bumpers = [self.default_model(target, detail=self.detail, test_drive=self.test_drive)]
+                            target_bumpers = [self.default_model(target, detail=self.detail,
+                                                                 test_drive=self.test_drive)]
 
                         self.bumpers.extend(target_bumpers)
 
@@ -121,7 +126,8 @@ class BumperDriver(object):
 
                         for bump in target_bumps:
                             for new_req in bump.requirements:
-                                if not (bump_reqs.satisfied_by_checked(new_req) or target_bump_reqs.satisfied_by_checked(new_req)):
+                                if not (bump_reqs.satisfied_by_checked(new_req) or
+                                        target_bump_reqs.satisfied_by_checked(new_req)):
                                     new_target_bump_reqs.add(new_req)
 
                     bump_reqs.matched_name |= target_bump_reqs.matched_name
@@ -130,7 +136,8 @@ class BumperDriver(object):
                     if new_target_bump_reqs:
                         bump_reqs.add(new_target_bump_reqs)
 
-                    target_bump_reqs = RequirementsManager(list(r for r in new_target_bump_reqs if r.project_name not in self.bumps))
+                    target_bump_reqs = RequirementsManager(list(
+                        r for r in new_target_bump_reqs if r.project_name not in self.bumps))
 
                     if not target_bump_reqs:
                         break
@@ -149,7 +156,8 @@ class BumperDriver(object):
                     for req in reqs:
                         if not self.full_throttle:
                             use_force = 'Use --force to ignore / force the bump' if req.required_by else ''
-                            raise BumpAccident('Requirement "%s" could not be met so bump can not proceed. %s' % (req, use_force))
+                            raise BumpAccident('Requirement "%s" could not be met so '
+                                               'bump can not proceed. %s' % (req, use_force))
 
                 if self.test_drive:
                     log.info("Changes that would be made:\n")
@@ -167,7 +175,8 @@ class BumperDriver(object):
                             if self.test_drive:
                                 print(msg)
                             else:
-                                rewords = [('Bump ', 'Bumped '), ('Pin ', 'Pinned '), ('Require ', 'Updated requirements: ')]
+                                rewords = [('Bump ', 'Bumped '), ('Pin ', 'Pinned '),
+                                           ('Require ', 'Updated requirements: ')]
                                 for word, new_word in rewords:
                                     if msg.startswith(word):
                                         msg = msg.replace(word, new_word, 1)

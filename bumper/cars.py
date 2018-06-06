@@ -116,12 +116,15 @@ class RequirementsManager(object):
                         add = False
                         break
 
-                    # Need to replace existing as the new req will be used to bump next, and req.required could be updated.
+                    # Need to replace existing as the new req will be used to bump next, and req.required could be
+                    # updated.
                     replace = False
 
                     # Two pins: Use highest pinned version
-                    if req.specs and req.specs[0][0] == '==' and existing_req.specs and existing_req.specs[0][0] == '==':
-                        if pkg_resources.parse_version(req.specs[0][1]) < pkg_resources.parse_version(existing_req.specs[0][1]):
+                    if (req.specs and req.specs[0][0] == '==' and existing_req.specs and
+                            existing_req.specs[0][0] == '=='):
+                        if pkg_resources.parse_version(req.specs[0][1]) < pkg_resources.parse_version(
+                                existing_req.specs[0][1]):
                             req.requirement = existing_req.requirement
                         replace = True
 
@@ -148,7 +151,8 @@ class RequirementsManager(object):
         """
         Check off requirements that are met by name/version.
 
-        :param str|Bump|Requirement context: Either package name, requirement string, :class:`Bump`, :class:`BumpRequirement`, or
+        :param str|Bump|Requirement context: Either package name, requirement string, :class:`Bump`,
+                                             :class:`BumpRequirement`, or
                                              :class:`pkg_resources.Requirement instance
         :return: True if any requirement was satisified by context
         """
@@ -237,7 +241,8 @@ class Bump(object):
             return self.name + ''.join(self.new_version)
 
     def __repr__(self):
-        return '%s(%s, %s, reqs=%s)' % (self.__class__.__name__, self.name, str(self.new_version), len(self.requirements))
+        return '%s(%s, %s, reqs=%s)' % (self.__class__.__name__, self.name, str(self.new_version),
+                                        len(self.requirements))
 
     @classmethod
     def from_requirement(cls, req, changes=None):
@@ -400,7 +405,8 @@ class AbstractBumper(object):
                 return version
 
         if all_package_versions:
-            raise BumpAccident('No published version could satisfy the requirement(s): %s\n\tLatest published versions: %s' %
+            raise BumpAccident('No published version could satisfy the requirement(s): %s'
+                               '\n\tLatest published versions: %s' %
                                (', '.join(str(r) for r in reqs), ', '.join(all_package_versions[:10])))
         else:
             raise BumpAccident('No published versions found for "%s"' % reqs[0].project_name)
@@ -458,11 +464,13 @@ class AbstractBumper(object):
 
             if bump_reqs:
                 # BLR: Pin with Many bump requirements
-                if self.should_pin() and (len(bump_reqs) > 1 or bump_reqs[0] and bump_reqs[0].specs and bump_reqs[0].specs[0][0] != '=='):
+                if self.should_pin() and (len(bump_reqs) > 1 or bump_reqs[0] and
+                                          bump_reqs[0].specs and bump_reqs[0].specs[0][0] != '=='):
                     log.debug('Bump to latest within requirements: %s', bump_reqs)
 
                     new_version = self.latest_version_for_requirements(bump_reqs)
-                    current_version = existing_req and existing_req.specs and existing_req.specs[0][0] == '==' and existing_req.specs[0][1]
+                    current_version = (existing_req and existing_req.specs and existing_req.specs[0][0] == '==' and
+                                       existing_req.specs[0][1])
 
                     if current_version == new_version:
                         return None
@@ -470,16 +478,20 @@ class AbstractBumper(object):
                     bump = Bump(name, ('==', new_version))
 
                 elif len(bump_reqs) > 1:
-                    raise BumpAccident('Not sure which requirement to use for %s: %s' % (name, ', '.join(str(r) for r in bump_reqs)))
+                    raise BumpAccident('Not sure which requirement to use for %s: %s' % (
+                        name, ', '.join(str(r) for r in bump_reqs)))
 
-                # BR: Pin with One bump requirement or Filter with One or Many bump requirements or Bump to Any reuqired.
+                # BR: Pin with One bump requirement or Filter with One or Many bump requirements or
+                #     Bump to Any required.
                 elif bump_reqs[0].specs or not (existing_req or self.should_pin() or bump_reqs[0].specs):
                     log.debug('Bump to requirement: %s', bump_reqs)
 
                     latest_version = self.latest_version_for_requirements(bump_reqs)
 
-                    new_version = bump_reqs[0].specs and bump_reqs[0].specs[0][0] == '==' and bump_reqs[0].specs[0][1] or latest_version
-                    current_version = existing_req and existing_req.specs and existing_req.specs[0][0] == '==' and existing_req.specs[0][1]
+                    new_version = (bump_reqs[0].specs and bump_reqs[0].specs[0][0] == '==' and
+                                   bump_reqs[0].specs[0][1] or latest_version)
+                    current_version = (existing_req and existing_req.specs and existing_req.specs[0][0] == '==' and
+                                       existing_req.specs[0][1])
 
                     if current_version == new_version:
                         return None
@@ -493,7 +505,8 @@ class AbstractBumper(object):
                     bump = Bump(name, version)
 
             # BL: Pin to Latest
-            if not bump and (existing_req and existing_req.specs and existing_req.specs[0][0] == '==' or self.should_pin() and not existing_req):
+            if not bump and (existing_req and existing_req.specs and existing_req.specs[0][0] == '==' or
+                             self.should_pin() and not existing_req):
                 log.debug('Bump to latest: %s', bump_reqs or name)
 
                 current_version = existing_req and existing_req.specs[0][1]
@@ -517,7 +530,8 @@ class AbstractBumper(object):
                 log.debug('Bumped %s', bump)
 
                 if bump.requirements:
-                    log.info('Changes in %s require: %s', bump.name, ', '.join(sorted(str(r) for r in bump.requirements)))
+                    log.info('Changes in %s require: %s',
+                             bump.name, ', '.join(sorted(str(r) for r in bump.requirements)))
 
             return bump if str(bump) != str(existing_req) else None
 
@@ -546,7 +560,8 @@ class AbstractBumper(object):
                     bump_reqs.check(bump)
 
             except Exception as e:
-                if bump_reqs and bump_reqs.get(existing_req.project_name) and all(r.required_by is None for r in bump_reqs.get(existing_req.project_name)):
+                if bump_reqs and bump_reqs.get(existing_req.project_name) and all(
+                        r.required_by is None for r in bump_reqs.get(existing_req.project_name)):
                     raise
                 else:
                     log.warn(e)
@@ -628,7 +643,8 @@ class RequirementsBumper(AbstractBumper):
             comments = []
 
             for req in self.original_target_content.strip().split('\n'):
-                if not req or req.startswith(('#', '-r ', '- e', 'http:', 'https:', 'svn+', 'git+', 'git:', 'hg+', 'bzr+', '--')):
+                if not req or req.startswith(
+                        ('#', '-r ', '- e', 'http:', 'https:', 'svn+', 'git+', 'git:', 'hg+', 'bzr+', '--')):
                     comments.append(req)
                     continue
 

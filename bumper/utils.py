@@ -166,7 +166,8 @@ class PyPI(object):
             for change_ext in ['rst', 'md', 'txt', None]:
                 for change_name in ['CHANGELOG', 'HISTORY', 'CHANGES', 'changes']:
                     for subfolder in ['', 'docs']:
-                        changelog_url = '%s/%s/%s%s' % (repo_url, subfolder, change_name, '.' + change_ext if change_ext else '')
+                        changelog_url = '%s/%s/%s%s' % (repo_url, subfolder,
+                                                        change_name, '.' + change_ext if change_ext else '')
                         log.debug('Trying %s', changelog_url)
                         try:
                             response = requests.get(changelog_url, timeout=5)

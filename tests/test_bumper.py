@@ -121,7 +121,7 @@ def test_bump_add_detail():
         bump()
 
         new_req = open('requirements.txt').read()
-        expect_req = 'remoteconfig>0.2,<0.2.5\n' if sys.version_info < (3, 0) else 'remoteconfig<0.2.5,>0.2\n'
+        expect_req = 'remoteconfig<0.2.5,>0.2\n'
         assert expect_req == new_req
 
         new_pinned = open('pinned.txt').read()

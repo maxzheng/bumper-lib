@@ -22,7 +22,7 @@ setuptools.setup(
   packages=setuptools.find_packages(),
   include_package_data=True,
 
-  setup_requires=['setuptools-git'],
+  setup_requires=['setuptools-git', 'wheel'],
 
   classifiers=[
     'Development Status :: 5 - Production/Stable',
@@ -33,10 +33,9 @@ setuptools.setup(
     'License :: OSI Approved :: MIT License',
 
     'Programming Language :: Python :: 2',
-    'Programming Language :: Python :: 2.6',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
   ],
 
   keywords='library bump pin requirements requirements.txt pinned.txt',

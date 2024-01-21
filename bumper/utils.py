@@ -76,7 +76,7 @@ class PyPI(object):
             package_info = PyPI.package_info(package)
 
             repo_url = None
-            repo_re = re.compile('https?://(?:github.com|bitbucket.org)/[\w\-]+/' + package)
+            repo_re = re.compile(r'https?://(?:github.com|bitbucket.org)/[\w\-]+/' + package)
 
             for url_name in ['home_page', 'docs_url']:
                 if package_info['info'].get(url_name):
@@ -94,8 +94,8 @@ class PyPI(object):
                 return changes
 
             changelog = PyPI._changelog(repo_url)
-            version_re = re.compile('^(?:Version )?(\d+(?:\.\d+)+)', flags=re.IGNORECASE)
-            hr_re = re.compile('^\s*(?:[\-=~+]+)\s*$')
+            version_re = re.compile(r'^(?:Version )?(\d+(?:\.\d+)+)', flags=re.IGNORECASE)
+            hr_re = re.compile(r'^\s*(?:[\-=~+]+)\s*$')
 
             if changelog:
                 version = None

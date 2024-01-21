@@ -6,10 +6,10 @@ import re
 from bumper.utils import parse_requirements, PyPI
 
 log = logging.getLogger(__name__)
-REQUIREMENTS_STR = '([\w\-]+)([>=<!\d+\.]+| to ([\d\.]+))?'
+REQUIREMENTS_STR = r'([\w\-]+)([>=<!\d+\.]+| to ([\d\.]+))?'
 REQUIREMENTS_RE = re.compile(REQUIREMENTS_STR)
-IS_REQUIREMENTS_RE = re.compile('^(?:Bump|Require|Pin) ((?:%s)(?:, %s)*)$' % (REQUIREMENTS_STR, REQUIREMENTS_STR))
-IS_REQUIREMENTS_RE2 = re.compile('requires?=(\w+.+)')
+IS_REQUIREMENTS_RE = re.compile(r'^(?:Bump|Require|Pin) ((?:%s)(?:, %s)*)$' % (REQUIREMENTS_STR, REQUIREMENTS_STR))
+IS_REQUIREMENTS_RE2 = re.compile(r'requires?=(\w+.+)')
 
 
 class BumpAccident(Exception):
